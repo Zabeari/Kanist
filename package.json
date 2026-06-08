@@ -2,19 +2,14 @@
   "name": "twdist-desktop",
   "version": "0.0.0",
   "description": "TWDist Desktop Application",
-  "main": "dist-electron/main.js",
   "scripts": {
     "ng": "ng",
-    "start": "bun run electron:dev",
+    "start": "bun run tauri:dev",
+    "tauri:dev": "bunx tauri dev",
+    "tauri:build": "bunx tauri build",
     "build": "ng build --base-href ./",
     "test": "ng test --watch=false",
     "test:watch": "ng test --watch",
-    "electron:tsc": "tsc -p electron/tsconfig.json",
-    "electron:serve": "wait-on tcp:4200 && cross-env NODE_ENV=development electron .",
-    "electron:dev": "concurrently -k \"ng serve\" \"bun run electron:tsc && bun run electron:serve\"",
-    "electron:config": "node scripts/write-electron-config.mjs",
-    "electron:preview": "ng build --configuration=electron-local --base-href ./ && bun run electron:tsc && cross-env NODE_ENV=production electron .",
-    "electron:build": "bun run electron:config && bun run build && bun run electron:tsc && electron-builder",
     "lint": "ng lint"
   },
   "private": true,
@@ -27,52 +22,22 @@
     "@angular/platform-browser": "^20.3.18",
     "@angular/platform-browser-dynamic": "^20.3.18",
     "@angular/router": "^20.3.18",
+    "@tauri-apps/api": "^2.11.0",
     "@types/node": "^24.12.0",
-    "concurrently": "^9.2.1",
-    "cross-env": "^10.1.0",
     "rxjs": "~7.8.2",
-    "tslib": "^2.8.1",
-    "wait-on": "^9.0.4"
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@analogjs/vite-plugin-angular": "^2.3.1",
-    "electron": "^39.8.2",
-    "electron-builder": "^26.8.1",
     "@angular-devkit/build-angular": "^20.3.20",
     "@angular/cli": "^20.3.20",
     "@angular/compiler-cli": "^20.3.18",
+    "@tauri-apps/cli": "^2.11.2",
     "angular-eslint": "21.0.1",
     "eslint": "^9.39.1",
     "jsdom": "^27.0.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "8.46.4",
     "vitest": "^3.2.4"
-  },
-  "build": {
-    "appId": "com.twdist.app",
-    "productName": "TWDist - Desktop version",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist-electron/**/*",
-      "dist/twdist-desktop/browser/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "electron/config.packaged.json",
-        "to": "config.json"
-      }
-    ],
-    "win": {
-      "target": "nsis"
-    },
-    "mac": {
-      "target": "dmg"
-    },
-    "linux": {
-      "target": ["AppImage", "deb"],
-      "maintainer": "David M. <davmunher@users.noreply.github.com>, Oscar Barber <oscbarcan@users.noreply.github.com>"
-    }
   }
 }
