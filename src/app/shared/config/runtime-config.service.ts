@@ -1,11 +1,6 @@
 import { Injectable } from '@angular/core';
 import { environment } from '@shared/config/environment';
 
-export interface ElectronAppConfig {
-  apiBaseUrl: string;
-  useBearerAuth?: boolean;
-}
-
 export interface ResolvedRuntimeConfig {
   apiBaseUrl: string;
   isBearerAuthEnabled: boolean;
@@ -13,82 +8,16 @@ export interface ResolvedRuntimeConfig {
 
 @Injectable({ providedIn: 'root' })
 export class RuntimeConfigService {
-  private config: ResolvedRuntimeConfig;
-
-  constructor() {
-    this.config = this.buildInitialConfig();
-  }
-
   get apiBaseUrl(): string {
-    return this.config.apiBaseUrl;
+    return environment.apiBaseUrl;
   }
 
   isBearerAuthEnabled(): boolean {
-    return this.config.isBearerAuthEnabled;
+    return environment.production;
   }
 
-  /** Loads Electron-side config when running inside the desktop shell. */
+  /** Reserved for future Tauri-side config loading. */
   async load(): Promise<void> {
-    const syncConfig = this.getSyncElectronConfig();
-    if (syncConfig?.apiBaseUrl) {
-      this.config = this.configFromElectron(syncConfig);
-      return;
-    }
-
-    if (typeof window === 'undefined' || !window.electronAPI?.getAppConfig) {
-      return;
-    }
-
-    const electronConfig = await window.electronAPI.getAppConfig();
-    if (!electronConfig?.apiBaseUrl) {
-      if (environment.isElectronRelease || this.isElectronShell()) {
-        console.error(
-          '[RuntimeConfig] Missing electron/config.local.json (or packaged config.json). ' +
-            'Copy electron/config.example.json and set apiBaseUrl.',
-        );
-      }
-      return;
-    }
-
-    this.config = this.configFromElectron(electronConfig);
-  }
-
-  private buildInitialConfig(): ResolvedRuntimeConfig {
-    const syncConfig = this.getSyncElectronConfig();
-    if (syncConfig?.apiBaseUrl) {
-      return this.configFromElectron(syncConfig);
-    }
-
-    if (this.isElectronShell()) {
-      return {
-        apiBaseUrl: environment.isElectronRelease ? '' : environment.apiBaseUrl,
-        isBearerAuthEnabled: true,
-      };
-    }
-
-    return {
-      apiBaseUrl: environment.apiBaseUrl,
-      isBearerAuthEnabled: environment.isElectronRelease,
-    };
-  }
-
-  private isElectronShell(): boolean {
-    return typeof window !== 'undefined' && !!window.electronAPI;
-  }
-
-  private getSyncElectronConfig(): ElectronAppConfig | null {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-
-    return window.__electronRuntimeConfig ?? null;
-  }
-
-  private configFromElectron(electronConfig: ElectronAppConfig): ResolvedRuntimeConfig {
-    return {
-      apiBaseUrl: electronConfig.apiBaseUrl,
-      isBearerAuthEnabled:
-        electronConfig.useBearerAuth ?? environment.isElectronRelease,
-    };
+    return;
   }
 }

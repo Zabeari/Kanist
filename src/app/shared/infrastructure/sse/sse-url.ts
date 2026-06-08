@@ -27,7 +27,7 @@ export function buildSseUrl(apiBaseUrl: string, path: string): string {
 
   if (!base) {
     throw new Error(
-      'API base URL is not configured. Set apiBaseUrl in electron/config.local.json (or packaged config.json).',
+      'API base URL is not configured. Desktop builds require runtime config from Tauri.',
     );
   }
 
@@ -35,7 +35,7 @@ export function buildSseUrl(apiBaseUrl: string, path: string): string {
   if (!isAbsolute) {
     throw new Error(
       `SSE requires an absolute API base URL (http/https). Got "${apiBaseUrl}". ` +
-        'In packaged Electron, set apiBaseUrl in electron/config.local.json (or packaged config.json).',
+        'Desktop builds require runtime config from Tauri.',
     );
   }
 
