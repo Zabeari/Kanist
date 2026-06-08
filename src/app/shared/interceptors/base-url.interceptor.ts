@@ -13,16 +13,16 @@ export const baseUrlInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (!baseUrl) {
     throw new Error(
-      'API base URL is not configured. For Electron, create electron/config.local.json (see config.example.json).',
+      'API base URL is not configured. Desktop builds require runtime config from Tauri.',
     );
   }
 
   const isAbsolute = baseUrl.startsWith('http://') || baseUrl.startsWith('https://');
-  const isDevProxyPath = baseUrl.startsWith('/') && !environment.isElectronRelease;
+  const isDevProxyPath = baseUrl.startsWith('/') && !environment.production;
 
   if (!isAbsolute && !isDevProxyPath) {
     throw new Error(
-      `API base URL must be absolute (http/https) in Electron builds. Got "${baseUrl}".`,
+      `API base URL must be absolute (http/https) in desktop builds. Got "${baseUrl}".`,
     );
   }
 

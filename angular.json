@@ -54,17 +54,6 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
-            },
-            "electron-local": {
-              "fileReplacements": [
-                {
-                  "replace": "src/app/shared/config/environment.ts",
-                  "with": "src/app/shared/config/environment.electron-local.ts"
-                }
-              ],
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true
             }
           },
           "defaultConfiguration": "production"

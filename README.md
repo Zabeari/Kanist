@@ -1,32 +1,33 @@
 # TWDist - Desktop version
 
-This project is for creating the client-side desktop version of the TWDist app (ToDo-List app), made with Angular 19 and Electron
+This project is for creating the client-side desktop version of the TWDist app (ToDo-List app), made with Angular 20 and Tauri.
 
 ## Installation and configuration
 
-1. Download this project and go to the dowloaded folder:
+1. Download this project and go to the downloaded folder:
 ```sh
 git clone https://github.com/DavMunHer/TWDist-Desktop
 cd TWDist-desktop
 ```
 
-2. Dowload the project dependencies:
+2. Download the project dependencies:
 ```sh
 npm install
 # or
 bun install
 ```
 
+3. For desktop development, install the [Rust toolchain](https://rustup.rs/) and platform dependencies (see [docs/local-development.md](docs/local-development.md)).
+
 ## Start developing
 
-**Quick start (Electron + hot reload):**
+**Quick start (Tauri + hot reload):**
 
 ```sh
-cp electron/config.example.json electron/config.local.json   # once — edit apiBaseUrl if needed
 bun run start
 ```
 
-**Contributor guide** (web vs Electron, local vs production API, preview & packaged builds):  
+**Contributor guide** (web vs Tauri, local vs production API, preview & packaged builds):  
 [docs/local-development.md](docs/local-development.md)
 
 ## Testing templates
