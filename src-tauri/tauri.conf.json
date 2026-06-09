@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "TWDist",
         "width": 800,
         "height": 600,
@@ -20,7 +21,35 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self' asset:",
+        "base-uri": "'self'",
+        "connect-src": "ipc: http://ipc.localhost http://localhost:8080 http://127.0.0.1:8080 https:",
+        "font-src": "'self' asset:",
+        "form-action": "'self'",
+        "frame-ancestors": "'none'",
+        "img-src": "'self' asset: blob: data:",
+        "media-src": "'none'",
+        "object-src": "'none'",
+        "style-src": "'unsafe-inline' 'self' asset:"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "base-uri": "'self'",
+        "connect-src": "ipc: http://ipc.localhost ws://localhost:4200 wss://localhost:4200 http://localhost:4200 http://localhost:8080 http://127.0.0.1:8080 https:",
+        "font-src": "'self' data:",
+        "form-action": "'self'",
+        "frame-ancestors": "'none'",
+        "img-src": "'self' blob: data:",
+        "media-src": "'none'",
+        "object-src": "'none'",
+        "style-src": "'unsafe-inline' 'self'"
+      },
+      "freezePrototype": true,
+      "capabilities": ["default"],
+      "headers": {
+        "X-Content-Type-Options": "nosniff"
+      }
     }
   },
   "bundle": {
