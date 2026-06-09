@@ -88,7 +88,14 @@ Artifacts appear under `src-tauri/target/release/bundle/`.
 
 ### GitHub Releases (CI)
 
-The release workflow in [`.github/workflows/release.yml`](../.github/workflows/release.yml) still targets the previous Electron packaging flow and will be updated in a future change to use Tauri.
+Installers are built by [`.github/workflows/release.yml`](../.github/workflows/release.yml) on each push to `main`:
+
+- **Linux** (`ubuntu-22.04`): `.AppImage` and `.deb` via `bun run tauri:build`
+- **Windows** (`windows-latest`): `.exe` (NSIS) and `.msi` via `bun run tauri:build`
+
+Artifacts are published as GitHub pre-releases with tags like `alpha-YYYYMMDD-<run_number>`.
+
+**Note:** Runtime API configuration via Tauri is not implemented yet. Packaged builds currently have an empty `apiBaseUrl` until a Tauri config command is added. When that lands, the release workflow can inject `TWDIST_API_BASE_URL` at build time.
 
 ---
 
