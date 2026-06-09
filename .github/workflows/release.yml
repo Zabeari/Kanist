@@ -2,7 +2,7 @@ name: Release Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ temporarely-disabled ]
 
 jobs:
   build-linux:
