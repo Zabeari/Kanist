@@ -88,7 +88,14 @@ Artifacts appear under `src-tauri/target/release/bundle/`.
 
 ### GitHub Releases (CI)
 
-The release workflow in [`.github/workflows/release.yml`](../.github/workflows/release.yml) still targets the previous Electron packaging flow and will be updated in a future change to use Tauri.
+Installers are built by [`.github/workflows/release.yml`](../.github/workflows/release.yml) on each push to `main`:
+
+- **Linux** (`ubuntu-22.04`): `.AppImage` and `.deb` via `bun run tauri:build`
+- **Windows** (`windows-latest`): `.exe` (NSIS) and `.msi` via `bun run tauri:build`
+
+Artifacts are published as GitHub pre-releases with tags like `alpha-YYYYMMDD-<run_number>`.
+
+**Note:** Runtime API configuration via Tauri is not implemented yet. Packaged builds currently have an empty `apiBaseUrl` until a Tauri config command is added. When that lands, the release workflow can inject `TWDIST_API_BASE_URL` at build time.
 
 ---
 
@@ -126,6 +133,22 @@ Manually verify the path you changed (browser dev, Tauri dev, or both).
 | `API base URL is not configured` | Production desktop build without runtime config from Tauri |
 | Login works in browser but not desktop | Using production build path; use `bun run start` for dev, or wait for Tauri runtime config |
 | CORS errors in browser | Backend CORS / proxy; use `ng serve` proxy, not a hardcoded remote URL in `environment.ts` |
+| CSP blocks `fetch` / `EventSource` in desktop build | API host not allowed in `connect-src`; update `src-tauri/tauri.conf.json` |
+
+---
+
+## Desktop security (CSP)
+
+Packaged builds use a restrictive Content Security Policy in `src-tauri/tauri.conf.json`:
+
+- **Production (`csp`)** — local assets only (`default-src`, fonts, images); `connect-src` allows Tauri IPC, local backend (`localhost:8080`), and `https:` for remote APIs.
+- **Development (`devCsp`)** — same rules plus `ws://localhost:4200` for the Angular dev server and hot reload.
+
+Tauri automatically injects script hashes/nonces for bundled JS. Angular component styles require `style-src 'unsafe-inline'`.
+
+When runtime API config is added via Tauri, tighten `connect-src` to the configured host instead of broad `https:`.
+
+Native features (file dialogs, HTTP plugin, etc.) also need explicit entries in `src-tauri/capabilities/default.json`.
 
 ---
 
@@ -134,4 +157,5 @@ Manually verify the path you changed (browser dev, Tauri dev, or both).
 - `proxy.conf.json` — web dev proxy
 - `src/app/shared/config/environment.ts` — web defaults (`/api`)
 - `src/app/shared/config/environment.prod.ts` — packaged Angular build (empty `apiBaseUrl`; future Tauri injection)
-- `src-tauri/tauri.conf.json` — Tauri app config (dev URL, dist path, window settings)
+- `src-tauri/tauri.conf.json` — Tauri app config (dev URL, CSP, window settings)
+- `src-tauri/capabilities/default.json` — Tauri IPC/plugin permissions

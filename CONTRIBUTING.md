@@ -5,12 +5,9 @@
 See **[docs/local-development.md](docs/local-development.md)** for:
 
 - Web dev (`ng serve`) against a local backend
-- Electron dev (`bun run start`) with `electron/config.local.json`
-- Electron preview (`bun run electron:preview`) — production-like shell
-- Testing against a **remote / production API** from your machine (without committing URLs)
-- Building installers locally with `TWDIST_API_BASE_URL`
-
-Never commit `electron/config.local.json` or `electron/config.packaged.json`.
+- Tauri dev (`bun run start`) with hot reload
+- Testing against a **remote / production API** from your machine (once runtime config is implemented)
+- Building desktop installers locally with `bun run tauri:build`
 
 ## CI before opening a PR
 
