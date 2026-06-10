@@ -19,6 +19,6 @@ describe('Component template (standalone)', () => {
 
   it('asserts component state', () => {
     const fixture = TestBed.createComponent(AppComponent);
-    expect(fixture.componentInstance.title).toBe('TWDist-desktop');
+    expect(fixture.componentInstance.title).toBe('Kanist-desktop');
   });
 });

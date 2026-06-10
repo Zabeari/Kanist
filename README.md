@@ -1,13 +1,13 @@
-# TWDist - Desktop version
+# Kanist - Desktop version
 
-This project is for creating the client-side desktop version of the TWDist app (ToDo-List app), made with Angular 20 and Tauri.
+This project is the client-side desktop version of Kanist (a ToDo-List app), made with Angular 20 and Tauri.
 
 ## Installation and configuration
 
 1. Download this project and go to the downloaded folder:
 ```sh
-git clone https://github.com/DavMunHer/TWDist-Desktop
-cd TWDist-desktop
+git clone https://github.com/Zabeari/Kanist
+cd Kanist
 ```
 
 2. Download the project dependencies:

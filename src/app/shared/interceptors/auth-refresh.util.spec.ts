@@ -57,7 +57,7 @@ describe('auth-refresh.util', () => {
       });
       tokenService = TestBed.inject(TokenService);
       sessionHintService = TestBed.inject(SessionHintService);
-      localStorage.setItem('twdist_refresh_token', 'refresh-abc');
+      localStorage.setItem('kanist_refresh_token', 'refresh-abc');
 
       expect(canAttemptTokenRefresh(tokenService, sessionHintService)).toBe(true);
     });

@@ -97,7 +97,7 @@ describe('SessionHintService', () => {
     });
 
     it('returns true when a refresh token is stored even without has_session', () => {
-      localStorage.setItem('twdist_refresh_token', 'refresh-abc');
+      localStorage.setItem('kanist_refresh_token', 'refresh-abc');
 
       expect(service.hasSessionHint()).toBe(true);
     });

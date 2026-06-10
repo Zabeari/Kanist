@@ -1,10 +1,10 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "TWDist",
+  "productName": "Kanist",
   "version": "0.1.0",
-  "identifier": "com.twdist.app",
+  "identifier": "com.kanist.app",
   "build": {
-    "frontendDist": "../dist/twdist-desktop/browser",
+    "frontendDist": "../dist/kanist-desktop/browser",
     "devUrl": "http://localhost:4200",
     "beforeDevCommand": "ng serve",
     "beforeBuildCommand": "ng build --base-href ./"
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "TWDist",
+        "title": "Kanist",
         "width": 800,
         "height": 600,
         "resizable": true,

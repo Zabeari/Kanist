@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "TWDist-desktop": {
+    "Kanist-desktop": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/twdist-desktop",
+            "outputPath": "dist/kanist-desktop",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
@@ -65,10 +65,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "TWDist-desktop:build:production"
+              "buildTarget": "Kanist-desktop:build:production"
             },
             "development": {
-              "buildTarget": "TWDist-desktop:build:development"
+              "buildTarget": "Kanist-desktop:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -84,7 +84,7 @@
             "include": [
               "src/**/*.spec.ts"
             ],
-            "buildTarget": "TWDist-desktop:build:development"
+            "buildTarget": "Kanist-desktop:build:development"
           }
         },
         "lint": {

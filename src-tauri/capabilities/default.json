@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Minimal permissions for the main TWDist window (IPC core only). Add plugin permissions here when new native features are introduced.",
+  "description": "Minimal permissions for the main Kanist window (IPC core only). Add plugin permissions here when new native features are introduced.",
   "windows": ["main"],
   "permissions": ["core:default"]
 }

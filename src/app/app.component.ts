@@ -10,6 +10,6 @@ import { ModalComponent } from "@shared/ui/modal/modal.component";
   styleUrl: './app.component.css'
 })
 export class AppComponent {
-  title = 'TWDist-desktop';
+  title = 'Kanist-desktop';
 
 }
