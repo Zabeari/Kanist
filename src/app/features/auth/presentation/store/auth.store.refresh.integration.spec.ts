@@ -129,8 +129,8 @@ describe('AuthStore refresh integration', () => {
     });
 
     it('refreshes and replays /auth/me when access token is expired', () => {
-      localStorage.setItem('twdist_access_token', 'expired-access');
-      localStorage.setItem('twdist_refresh_token', 'valid-refresh');
+      localStorage.setItem('kanist_access_token', 'expired-access');
+      localStorage.setItem('kanist_refresh_token', 'valid-refresh');
 
       bearerStore.checkAuthStatus().subscribe();
 
@@ -147,16 +147,16 @@ describe('AuthStore refresh integration', () => {
         refreshToken: 'new-refresh',
       });
 
-      expect(localStorage.getItem('twdist_access_token')).toBe('new-access');
-      expect(localStorage.getItem('twdist_refresh_token')).toBe('new-refresh');
+      expect(localStorage.getItem('kanist_access_token')).toBe('new-access');
+      expect(localStorage.getItem('kanist_refresh_token')).toBe('new-refresh');
 
       const replayReq = bearerHttpMock.expectOne('/auth/me');
       expect(replayReq.request.headers.get('Authorization')).toBe('Bearer new-access');
       replayReq.flush(USER_DTO);
 
       expect(bearerStore.isAuthenticated()).toBe(true);
-      expect(localStorage.getItem('twdist_access_token')).toBe('new-access');
-      expect(localStorage.getItem('twdist_refresh_token')).toBe('new-refresh');
+      expect(localStorage.getItem('kanist_access_token')).toBe('new-access');
+      expect(localStorage.getItem('kanist_refresh_token')).toBe('new-refresh');
     });
   });
 });

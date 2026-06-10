@@ -1,7 +1,11 @@
 {
-  "name": "twdist-desktop",
+  "name": "kanist-desktop",
   "version": "0.0.0",
-  "description": "TWDist Desktop Application",
+  "description": "Kanist Desktop Application",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zabeari/Kanist.git"
+  },
   "scripts": {
     "ng": "ng",
     "start": "bun run tauri:dev",

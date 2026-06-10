@@ -1,4 +1,4 @@
-# Running TWDist Desktop locally
+# Running Kanist Desktop locally
 
 This guide explains how to run the app against a **local backend** or a **remote production-like API**, using the web dev server or the Tauri desktop shell.
 
@@ -6,7 +6,7 @@ This guide explains how to run the app against a **local backend** or a **remote
 
 - [Bun](https://bun.sh) or Node.js 20+ and npm
 - Dependencies installed: `bun install`
-- A running **TWDist backend** (local JAR on port `8080`, or a deployed Cloud Run URL)
+- A running **Kanist backend** (local JAR on port `8080`, or a deployed Cloud Run URL)
 - For Tauri desktop development:
   - [Rust toolchain](https://rustup.rs/) (`rustup` stable)
   - Linux system libraries (Debian/Ubuntu example):
@@ -95,7 +95,7 @@ Installers are built by [`.github/workflows/release.yml`](../.github/workflows/r
 
 Artifacts are published as GitHub pre-releases with tags like `alpha-YYYYMMDD-<run_number>`.
 
-**Note:** Runtime API configuration via Tauri is not implemented yet. Packaged builds currently have an empty `apiBaseUrl` until a Tauri config command is added. When that lands, the release workflow can inject `TWDIST_API_BASE_URL` at build time.
+**Note:** Runtime API configuration via Tauri is not implemented yet. Packaged builds currently have an empty `apiBaseUrl` until a Tauri config command is added. When that lands, the release workflow can inject `KANIST_API_BASE_URL` at build time.
 
 ---
 

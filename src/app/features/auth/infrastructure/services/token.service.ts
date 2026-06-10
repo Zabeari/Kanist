@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { RuntimeConfigService } from '@shared/config/runtime-config.service';
 
-const ACCESS_TOKEN_KEY = 'twdist_access_token';
-const REFRESH_TOKEN_KEY = 'twdist_refresh_token';
+const ACCESS_TOKEN_KEY = 'kanist_access_token';
+const REFRESH_TOKEN_KEY = 'kanist_refresh_token';
 
 export interface StoredTokens {
   accessToken: string;

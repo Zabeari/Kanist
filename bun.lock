@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "twdist-desktop",
+      "name": "kanist-desktop",
       "dependencies": {
         "@angular/animations": "^20.3.18",
         "@angular/common": "^20.3.18",
