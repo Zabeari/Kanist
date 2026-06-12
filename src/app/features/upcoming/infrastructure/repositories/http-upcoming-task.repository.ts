@@ -4,7 +4,6 @@ import { UpcomingTaskAggregate } from '@features/upcoming/domain/models/upcoming
 import { UpcomingTaskRepository } from '@features/upcoming/domain/repositories/upcoming-task.repository';
 import { UpcomingTaskDto } from '@features/upcoming/infrastructure/dto/upcoming-task.dto';
 import { UpcomingTaskMapper } from '@features/upcoming/infrastructure/mappers/upcoming-task.mapper';
-import { requiresAuthContext } from '@shared/interceptors/auth-context.token';
 import { formatDateToISO } from '@shared/utils/date.util';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -19,10 +18,7 @@ export class HttpUpcomingTaskRepository extends UpcomingTaskRepository {
       .set('to', formatDateToISO(to));
 
     return this.http
-      .get<UpcomingTaskDto[]>('/tasks/upcoming', {
-        ...requiresAuthContext(),
-        params,
-      })
+      .get<UpcomingTaskDto[]>('/tasks/upcoming', { params })
       .pipe(map((dtos) => UpcomingTaskMapper.toDomainAggregates(dtos)));
   }
 }

@@ -12,7 +12,6 @@ import { UpdateUsernameDto } from "@features/auth/infrastructure/dto/request/upd
 import { UpdatePasswordDto } from "@features/auth/infrastructure/dto/request/update-password.dto";
 import { SessionHintService } from "@features/auth/infrastructure/services/session-hint.service";
 import { TokenService } from "@features/auth/infrastructure/services/token.service";
-import { requiresAuthContext } from "@shared/interceptors/auth-context.token";
 import { AuthError } from "@features/auth/domain/errors/auth.error";
 
 @Injectable()
@@ -77,7 +76,7 @@ export class HttpAuthRepository extends AuthRepository {
   }
 
   logout(): Observable<void> {
-    return this.http.post<void>('/auth/logout', {}, requiresAuthContext()).pipe(
+    return this.http.post<void>('/auth/logout', {}).pipe(
       tap(() => this.clearLocalSession()),
       catchError(() => {
         this.clearLocalSession();
@@ -91,7 +90,7 @@ export class HttpAuthRepository extends AuthRepository {
       return of(null);
     }
 
-    return this.http.get<UserResponseDto>('/auth/me', requiresAuthContext())
+    return this.http.get<UserResponseDto>('/auth/me')
       .pipe(
         map(dto => UserMapper.toDomain(dto)),
         catchError(() => of(null)),
@@ -99,7 +98,7 @@ export class HttpAuthRepository extends AuthRepository {
   }
 
   updateUsername(dto: UpdateUsernameDto): Observable<User> {
-    return this.http.patch<UserResponseDto>('/users/username', dto, requiresAuthContext())
+    return this.http.patch<UserResponseDto>('/users/username', dto)
       .pipe(
         map(responseDto => {
           if (!responseDto?.id) {
@@ -117,7 +116,7 @@ export class HttpAuthRepository extends AuthRepository {
   }
 
   updatePassword(dto: UpdatePasswordDto): Observable<void> {
-    return this.http.patch<void>('/users/password', dto, requiresAuthContext())
+    return this.http.patch<void>('/users/password', dto)
       .pipe(
         map(() => void 0),
         catchError((error: unknown) => {
