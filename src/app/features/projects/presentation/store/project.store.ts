@@ -1,5 +1,4 @@
-import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { LoadProjectUseCase } from '@features/projects/application/use-cases/projects/load-project/load-project.use-case';
 import { LoadAllProjectsUseCase } from '@features/projects/application/use-cases/projects/load-all-projects/load-all-projects.use-case';
 import { CreateProjectInput, CreateProjectUseCase } from '@features/projects/application/use-cases/projects/create-project/create-project.use-case';
@@ -16,16 +15,7 @@ import {
 import { SectionStore } from '@features/projects/presentation/store/section.store';
 import { TaskStore } from '@features/projects/presentation/store/task.store';
 import { ProjectSummaryStore } from '@features/projects/presentation/store/project-summary.store';
-import { ProjectEventsService } from '@features/projects/infrastructure/services/project-events.service';
-import { UserEventsService } from '@features/projects/infrastructure/services/user-events.service';
-import { ProjectEvent, DeletePayload } from '@features/projects/infrastructure/dto/sse/project-event';
-import { UserEvent, ProjectDeletePayload } from '@features/projects/infrastructure/dto/sse/user-event';
-import { ProjectSummaryDto } from '@features/projects/infrastructure/dto/response/project-summary.dto';
 import { Section } from '@features/projects/domain/entities/section.entity';
-import { SectionMapper } from '@features/projects/infrastructure/mappers/section.mapper';
-import { TaskMapper } from '@features/projects/infrastructure/mappers/task.mapper';
-import { SectionDto } from '@features/projects/infrastructure/dto/section.dto';
-import { TaskDto } from '@features/projects/infrastructure/dto/task.dto';
 import { ProjectsError } from '@features/projects/application/errors/projects.error';
 import { toProjectsUiError } from '@features/projects/presentation/mappers/projects-ui-error.mapper';
 import { UiError } from '@features/projects/presentation/models/ui-error';
@@ -41,7 +31,7 @@ import { UiError } from '@features/projects/presentation/models/ui-error';
  * to build the denormalized tree the template needs.
  */
 @Injectable()
-export class ProjectStore implements OnDestroy {
+export class ProjectStore {
   // --------------- Use-case injection ---------------
   private readonly loadProjectUseCase   = inject(LoadProjectUseCase);
   private readonly loadAllProjectsUseCase = inject(LoadAllProjectsUseCase);
@@ -54,12 +44,6 @@ export class ProjectStore implements OnDestroy {
   private readonly sectionStore         = inject(SectionStore);
   private readonly taskStore            = inject(TaskStore);
   private readonly projectSummaryStore  = inject(ProjectSummaryStore);
-
-  // --------------- SSE ---------------
-  private readonly projectEventsService = inject(ProjectEventsService);
-  private readonly userEventsService = inject(UserEventsService);
-  private projectEventsSubscription?: Subscription;
-  private userEventsSubscription?: Subscription;
 
   // --------------- State signal ---------------
   private readonly state = signal<ProjectState>(initialProjectState);
@@ -255,13 +239,7 @@ export class ProjectStore implements OnDestroy {
     });
   }
 
-  /**
-   * Load a full project (with sections & tasks) from the API,
-   * then distribute the normalized data to each store.
-   * Opens an SSE connection for live updates from other users.
-   */
   loadProject(projectId: string): void {
-    this.disconnectFromProjectEvents();
     this.clearState();
     this.state.update(s => ({
       ...s,
@@ -278,8 +256,6 @@ export class ProjectStore implements OnDestroy {
           ...s,
           loading: false,
         }));
-
-        this.connectToProjectEvents(projectId);
       },
       error: (error) => {
         this.state.update(s => ({ ...s, loading: false }));
@@ -294,7 +270,6 @@ export class ProjectStore implements OnDestroy {
    */
   loadAllProjects(): void {
     this.clearState();
-    this.connectToUserEvents();
 
     this.loadAllProjectsUseCase.execute().subscribe({
       next: (summaries) => {
@@ -384,10 +359,6 @@ export class ProjectStore implements OnDestroy {
     this.projectSummaryStore.removePendingCount(projectId);
 
     if (this.state().selectedProjectId === projectId) {
-      // We are deleting the currently-open project; close its SSE stream immediately
-      // so the browser doesn't keep a live connection to a project that no longer exists.
-      this.disconnectFromProjectEvents();
-
       const ids = Object.keys(this.state().projects);
       if (ids.length > 0) {
         // RELOAD: First project in list when we delete a project
@@ -536,172 +507,4 @@ export class ProjectStore implements OnDestroy {
     });
   }
 
-  // ===================================================================
-  // SSE — real-time updates from other users
-  // ===================================================================
-
-  // --- Project channel (per-project, rotates on project change) ---
-
-  private connectToProjectEvents(projectId: string): void {
-    this.projectEventsSubscription = this.projectEventsService
-      .connect(projectId)
-      .subscribe(event => this.handleProjectEvent(event, projectId));
-  }
-
-  private disconnectFromProjectEvents(): void {
-    this.projectEventsSubscription?.unsubscribe();
-    this.projectEventsSubscription = undefined;
-  }
-
-  // --- User channel (session-wide, open from login to logout) ---
-
-  private connectToUserEvents(): void {
-    this.userEventsSubscription?.unsubscribe();
-    this.userEventsSubscription = this.userEventsService
-      .connect()
-      .subscribe(event => this.handleUserEvent(event));
-  }
-
-  private disconnectFromUserEvents(): void {
-    this.userEventsSubscription?.unsubscribe();
-    this.userEventsSubscription = undefined;
-  }
-
-  ngOnDestroy(): void {
-    this.disconnectFromEvents();
-  }
-
-  /** Close all SSE connections. Call on logout / navigation away. */
-  disconnectFromEvents(): void {
-    this.disconnectFromProjectEvents();
-    this.disconnectFromUserEvents();
-  }
-
-  // --- Event handlers ---
-
-  private handleUserEvent(event: UserEvent): void {
-    switch (event.type) {
-      case 'project_created': {
-        const dto = event.data as ProjectSummaryDto;
-        const projectId = String(dto.id);
-        if (!this.state().projects[projectId]) {
-          const project: ProjectOutput = {
-            id: projectId,
-            name: dto.name,
-            favorite: dto.favorite,
-            sectionIds: [],
-          };
-          this.upsertProject(projectId, project);
-          this.projectSummaryStore.mergePendingCounts({ [projectId]: dto.pendingCount });
-        }
-        break;
-      }
-
-      case 'project_updated': {
-        const dto = event.data as ProjectSummaryDto;
-        const projectId = String(dto.id);
-        const existing = this.state().projects[projectId];
-        if (existing) {
-          this.upsertProject(projectId, {
-            ...existing,
-            name: dto.name,
-            favorite: dto.favorite,
-          });
-          this.projectSummaryStore.mergePendingCounts({ [projectId]: dto.pendingCount });
-        }
-        break;
-      }
-
-      case 'project_deleted': {
-        const { id } = event.data as ProjectDeletePayload;
-        const projectId = String(id);
-        this.removeProject(projectId);
-        this.projectSummaryStore.removePendingCount(projectId);
-        if (this.state().selectedProjectId === projectId) {
-          // The currently-open project was deleted elsewhere; close the per-project SSE stream.
-          this.disconnectFromProjectEvents();
-          const ids = Object.keys(this.state().projects);
-          if (ids.length > 0) {
-            this.loadProject(ids[0]);
-          }
-        }
-        break;
-      }
-    }
-  }
-
-  private handleProjectEvent(event: ProjectEvent, projectId: string): void {
-    switch (event.type) {
-      case 'section_created': {
-        const dto = event.data as SectionDto;
-        const section = SectionMapper.toDomain(dto, projectId);
-        this.sectionStore.mergeSections([section]);
-
-        const existing = this.state().projects[projectId];
-        if (existing && !existing.sectionIds.includes(section.id)) {
-          this.upsertProject(projectId, {
-            ...existing,
-            sectionIds: [...existing.sectionIds, section.id],
-          });
-        }
-        break;
-      }
-
-      case 'section_updated': {
-        const dto = event.data as SectionDto;
-        const section = SectionMapper.toDomain(dto, projectId);
-        this.sectionStore.mergeSections([section]);
-        break;
-      }
-
-      case 'section_deleted': {
-        const { id } = event.data as DeletePayload;
-        const sectionId = String(id);
-        this.sectionStore.removeSection(sectionId);
-
-        const existing = this.state().projects[projectId];
-        if (existing?.sectionIds.includes(sectionId)) {
-          this.upsertProject(projectId, {
-            ...existing,
-            sectionIds: existing.sectionIds.filter((sId) => sId !== sectionId),
-          });
-        }
-        break;
-      }
-
-      case 'task_created': {
-        const dto = event.data as TaskDto;
-        const rawSectionId = (event.data as Record<string, unknown>)['sectionId'];
-        const sectionId = typeof rawSectionId === 'string' || typeof rawSectionId === 'number'
-          ? String(rawSectionId)
-          : String(dto.id);
-        const taskId = String(dto.id);
-        const tasks = TaskMapper.flattenToDomain(dto, sectionId);
-        this.taskStore.mergeTasks(tasks);
-        const section = this.sectionStore.getSection(sectionId);
-        if (section && !section.taskIds.includes(taskId)) {
-          this.sectionStore.addTaskToSection(sectionId, taskId);
-        }
-        break;
-      }
-
-      case 'task_updated': {
-        const dto = event.data as TaskDto;
-        const sectionId = String((event.data as Record<string, unknown>)['sectionId']);
-        const tasks = TaskMapper.flattenToDomain(dto, sectionId);
-        this.taskStore.mergeTasks(tasks);
-        break;
-      }
-
-      case 'task_deleted': {
-        const { id, sectionId } = event.data as DeletePayload;
-        const taskId = String(id);
-        if (sectionId) {
-          this.sectionStore.removeTaskFromSection(String(sectionId), taskId);
-        }
-        this.taskStore.removeTask(taskId);
-        break;
-      }
-    }
-  }
 }

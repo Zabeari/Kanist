@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { Observable, of } from 'rxjs';
+import { of } from 'rxjs';
 
 import { ProjectStore } from './project.store';
 import { LoadProjectUseCase } from '@features/projects/application/use-cases/projects/load-project/load-project.use-case';
@@ -13,8 +13,6 @@ import { UpdateProjectUseCase } from '@features/projects/application/use-cases/p
 import { SectionStore } from './section.store';
 import { TaskStore } from './task.store';
 import { ProjectSummaryStore } from './project-summary.store';
-import { ProjectEventsService } from '@features/projects/infrastructure/services/project-events.service';
-import { UserEventsService } from '@features/projects/infrastructure/services/user-events.service';
 
 describe('ProjectStore', () => {
   let store: ProjectStore;
@@ -38,8 +36,6 @@ describe('ProjectStore', () => {
   const removeTask = vi.fn();
   const toggleFavoriteExecute = vi.fn();
   const updateProjectExecute = vi.fn();
-  const connectProjectEvents = vi.fn();
-  const connectUserEvents = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -55,8 +51,6 @@ describe('ProjectStore', () => {
         tasks: [],
       }),
     );
-    connectProjectEvents.mockReturnValue(of());
-    connectUserEvents.mockReturnValue(of());
     toggleFavoriteExecute.mockReturnValue(of(void 0));
 
     TestBed.configureTestingModule({
@@ -96,8 +90,6 @@ describe('ProjectStore', () => {
           provide: ProjectSummaryStore,
           useValue: { mergePendingCounts, removePendingCount },
         },
-        { provide: ProjectEventsService, useValue: { connect: connectProjectEvents } },
-        { provide: UserEventsService, useValue: { connect: connectUserEvents } },
       ],
     });
     store = TestBed.inject(ProjectStore);
@@ -195,17 +187,4 @@ describe('ProjectStore', () => {
     expect(toggleTaskCompletion).toHaveBeenCalledWith('p1', 't1');
   });
 
-  it('disconnectFromEvents unsubscribes project and user streams', () => {
-    const closeProject = vi.fn();
-    const closeUser = vi.fn();
-    connectProjectEvents.mockReturnValue(new Observable(() => closeProject));
-    connectUserEvents.mockReturnValue(new Observable(() => closeUser));
-
-    store.loadProject('p1');
-    store.loadAllProjects();
-    store.disconnectFromEvents();
-
-    expect(closeProject).toHaveBeenCalled();
-    expect(closeUser).toHaveBeenCalled();
-  });
 });
