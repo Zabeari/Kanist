@@ -1,3 +1,4 @@
+import * as Y from 'yjs';
 import { describe, expect, it } from 'vitest';
 import { PROJECT_SCHEMA_VERSION, YProjectDocument } from './y-project-document';
 
@@ -35,5 +36,24 @@ describe('YProjectDocument', () => {
       favorite: true,
       schemaVersion: PROJECT_SCHEMA_VERSION,
     });
+  });
+
+  it('getMeta throws when a required field is missing', () => {
+    const doc = new Y.Doc();
+    doc.getMap('meta').set('name', 'Incomplete');
+    const loaded = YProjectDocument.load(Y.encodeStateAsUpdate(doc));
+
+    expect(() => loaded.getMeta()).toThrow(/meta\.favorite is missing/);
+  });
+
+  it('getMeta throws when a field has the wrong type', () => {
+    const doc = new Y.Doc();
+    const meta = doc.getMap('meta');
+    meta.set('name', 123);
+    meta.set('favorite', false);
+    meta.set('schemaVersion', PROJECT_SCHEMA_VERSION);
+    const loaded = YProjectDocument.load(Y.encodeStateAsUpdate(doc));
+
+    expect(() => loaded.getMeta()).toThrow(/meta\.name must be a string/);
   });
 });

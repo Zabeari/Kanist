@@ -30,11 +30,33 @@ export class YProjectDocument {
 
   getMeta(): ProjectMeta {
     const meta = this.doc.getMap('meta');
-    return {
-      name: meta.get('name') as string,
-      favorite: meta.get('favorite') as boolean,
-      schemaVersion: meta.get('schemaVersion') as number,
-    };
+    const context = `YProjectDocument(doc=${this.doc.guid})`;
+
+    if (!meta.has('name')) {
+      throw new Error(`${context}: meta.name is missing`);
+    }
+    const name = meta.get('name');
+    if (typeof name !== 'string') {
+      throw new Error(`${context}: meta.name must be a string, got ${typeof name}`);
+    }
+
+    if (!meta.has('favorite')) {
+      throw new Error(`${context}: meta.favorite is missing`);
+    }
+    const favorite = meta.get('favorite');
+    if (typeof favorite !== 'boolean') {
+      throw new Error(`${context}: meta.favorite must be a boolean, got ${typeof favorite}`);
+    }
+
+    if (!meta.has('schemaVersion')) {
+      throw new Error(`${context}: meta.schemaVersion is missing`);
+    }
+    const schemaVersion = meta.get('schemaVersion');
+    if (typeof schemaVersion !== 'number') {
+      throw new Error(`${context}: meta.schemaVersion must be a number, got ${typeof schemaVersion}`);
+    }
+
+    return { name, favorite, schemaVersion };
   }
 
   setMeta(meta: Partial<ProjectMeta>): void {
