@@ -14,7 +14,8 @@ export class YProjectDocument {
   static create(name: string, favorite: boolean): YProjectDocument {
     const doc = new Y.Doc();
     const wrapper = new YProjectDocument(doc);
-    wrapper.setMeta({ name, favorite, schemaVersion: PROJECT_SCHEMA_VERSION });
+    doc.getMap('meta').set('schemaVersion', PROJECT_SCHEMA_VERSION);
+    wrapper.setMeta({ name, favorite });
     return wrapper;
   }
 
@@ -59,16 +60,13 @@ export class YProjectDocument {
     return { name, favorite, schemaVersion };
   }
 
-  setMeta(meta: Partial<ProjectMeta>): void {
+  setMeta(meta: Partial<Pick<ProjectMeta, 'name' | 'favorite'>>): void {
     const map = this.doc.getMap('meta');
     if (meta.name !== undefined) {
       map.set('name', meta.name);
     }
     if (meta.favorite !== undefined) {
       map.set('favorite', meta.favorite);
-    }
-    if (meta.schemaVersion !== undefined) {
-      map.set('schemaVersion', meta.schemaVersion);
     }
   }
 }

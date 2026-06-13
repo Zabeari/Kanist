@@ -38,6 +38,14 @@ describe('YProjectDocument', () => {
     });
   });
 
+  it('setMeta does not change schemaVersion', () => {
+    const doc = YProjectDocument.create('Stable', false);
+
+    doc.setMeta({ name: 'Renamed', favorite: true });
+
+    expect(doc.getMeta().schemaVersion).toBe(PROJECT_SCHEMA_VERSION);
+  });
+
   it('getMeta throws when a required field is missing', () => {
     const doc = new Y.Doc();
     doc.getMap('meta').set('name', 'Incomplete');
