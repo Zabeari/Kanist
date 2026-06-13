@@ -43,6 +43,7 @@ export class DatabaseService {
 
   private async doInitialize(): Promise<void> {
     this.db = await Database.load(DB_PATH);
+    await this.db.execute('PRAGMA foreign_keys = ON');
     for (const sql of MIGRATIONS) {
       await this.db.execute(sql);
     }
