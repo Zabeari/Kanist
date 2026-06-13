@@ -3,5 +3,11 @@
   "identifier": "default",
   "description": "Minimal permissions for the main Kanist window (IPC core only). Add plugin permissions here when new native features are introduced.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "sql:allow-select",
+    "sql:allow-close"
+  ]
 }
