@@ -2,7 +2,7 @@ import { Provider } from '@angular/core';
 import { ProjectRepository } from '@features/projects/domain/repositories/project.repository';
 import { SectionRepository } from '@features/projects/domain/repositories/section.repository';
 import { TaskRepository } from '@features/projects/domain/repositories/task.repository';
-import { HttpProjectRepository } from '@features/projects/infrastructure/repositories/http-project.repository';
+import { CrdtProjectRepository } from '@features/projects/infrastructure/repositories/crdt-project.repository';
 import { HttpSectionRepository } from '@features/projects/infrastructure/repositories/http-section.repository';
 import { HttpTaskRepository } from '@features/projects/infrastructure/repositories/http-task.repository';
 import { LoadProjectUseCase } from '@features/projects/application/use-cases/projects/load-project/load-project.use-case';
@@ -21,7 +21,7 @@ import { UpdateTaskUseCase } from '@features/projects/application/use-cases/task
 import { DeleteTaskUseCase } from '@features/projects/application/use-cases/tasks/delete-task/delete-task.use-case';
 export const PROJECT_FEATURE_PROVIDERS: Provider[] = [
   // Repositories
-  { provide: ProjectRepository, useClass: HttpProjectRepository },
+  { provide: ProjectRepository, useClass: CrdtProjectRepository },
   { provide: SectionRepository, useClass: HttpSectionRepository },
   { provide: TaskRepository, useClass: HttpTaskRepository },
 

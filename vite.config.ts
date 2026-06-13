@@ -9,6 +9,7 @@ export default defineConfig({
   plugins: [angular()],
   resolve: {
     alias: {
+      '@core': resolve(__dirname, 'src/app/core'),
       '@features': resolve(__dirname, 'src/app/features'),
       '@shared': resolve(__dirname, 'src/app/shared'),
       '@vitest': resolve(__dirname, 'src/vitest'),
