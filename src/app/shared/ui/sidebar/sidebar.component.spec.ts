@@ -2,17 +2,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ModalService } from '@shared/ui/modal/modal.service';
 import { ConfigurationComponent } from '@shared/ui/modal/configuration/configuration.component';
-import { ProfileComponent } from '@shared/ui/modal/profile/profile.component';
 import { TWDSidebarMenu } from '@shared/ui/sidebar/sidebar-menu';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SidebarComponent } from '@shared/ui/sidebar/sidebar.component';
-import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { AuthStore } from '@features/auth/presentation/store/auth.store';
-import { User } from '@features/auth/domain/entities/user.entity';
-
-const mockUser = new User('1', 'test@example.com', 'TestUser');
-const mockAuthStore = { user: signal<User | null>(mockUser) };
+import { provideZonelessChangeDetection } from '@angular/core';
 
 
 describe('SidebarComponent', () => {
@@ -45,7 +39,6 @@ describe('SidebarComponent', () => {
       imports: [SidebarComponent],
       providers: [
         provideZonelessChangeDetection(),
-        { provide: AuthStore, useValue: mockAuthStore },
       ],
     }).compileComponents();
 
@@ -109,27 +102,9 @@ describe('SidebarComponent', () => {
     expect(dropdown?.classList.contains('open')).toBe(false);
   });
 
-  it('opens profile modal when profile option is clicked', () => {
-    const openSpy = vi.spyOn(modalService, 'open');
-    const profileOptionDE = fixture.debugElement.query(By.css('.dropdown-content .dropdown-action'));
-    const triggerButton: HTMLButtonElement | null = fixture.nativeElement.querySelector('.profile-dropdown-trigger');
-    const dropdown: HTMLElement | null = fixture.nativeElement.querySelector('.profile-dropdown');
-
-    triggerButton?.click();
-    fixture.detectChanges();
-    expect(dropdown?.classList.contains('open')).toBe(true);
-
-    profileOptionDE.triggerEventHandler('click');
-    fixture.detectChanges();
-
-    expect(openSpy).toHaveBeenCalledWith(ProfileComponent, { title: 'Profile' });
-    expect(dropdown?.classList.contains('open')).toBe(false);
-  });
-
   it('opens configuration modal and closes dropdown when configuration option is clicked', () => {
     const openSpy = vi.spyOn(modalService, 'open');
-    const optionsDE = fixture.debugElement.queryAll(By.css('.dropdown-content .dropdown-action'));
-    const configurationOptionDE = optionsDE[1];
+    const configurationOptionDE = fixture.debugElement.query(By.css('.dropdown-content .dropdown-action'));
     const triggerButton: HTMLButtonElement | null = fixture.nativeElement.querySelector('.profile-dropdown-trigger');
     const dropdown: HTMLElement | null = fixture.nativeElement.querySelector('.profile-dropdown');
 

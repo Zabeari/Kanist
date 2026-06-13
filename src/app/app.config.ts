@@ -1,20 +1,12 @@
-import { ApplicationConfig, inject, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter, withHashLocation } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 
 import { routes } from './app.routes';
 import { PROJECT_FEATURE_PROVIDERS } from '@features/projects/projects.providers';
-import { authInterceptor } from '@shared/interceptors/auth.interceptor';
 import { baseUrlInterceptor } from '@shared/interceptors/base-url.interceptor';
-import { credentialsInterceptor } from '@shared/interceptors/credentials.interceptor';
-import { errorInterceptor } from '@shared/interceptors/error.interceptor';
-import { refreshTokenInterceptor } from '@shared/interceptors/refresh-token.interceptor';
-import { AUTH_FEATURE_PROVIDERS } from '@features/auth/auth.providers';
-import { AuthStore } from '@features/auth/presentation/store/auth.store';
 import { TODAY_FEATURE_PROVIDERS } from '@features/today/today.providers';
 import { UPCOMING_FEATURE_PROVIDERS } from '@features/upcoming/upcoming.providers';
-import { RuntimeConfigService } from '@shared/config/runtime-config.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -22,25 +14,11 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withHashLocation()),
     provideHttpClient(
       withInterceptors([
-        refreshTokenInterceptor,
         baseUrlInterceptor,
-        authInterceptor,
-        credentialsInterceptor,
-        errorInterceptor,
       ])
     ),
     ...PROJECT_FEATURE_PROVIDERS,
-    ...AUTH_FEATURE_PROVIDERS,
     ...TODAY_FEATURE_PROVIDERS,
     ...UPCOMING_FEATURE_PROVIDERS,
-
-    provideAppInitializer(async () => {
-      const runtimeConfig = inject(RuntimeConfigService);
-      const authStore = inject(AuthStore);
-      await runtimeConfig.load();
-      // Must await the auth check — returning the Observable from an async fn only
-      // resolves a Promise<Observable>, so bootstrap would finish before /auth/me.
-      await firstValueFrom(authStore.checkAuthStatus());
-    }),
   ],
 };
