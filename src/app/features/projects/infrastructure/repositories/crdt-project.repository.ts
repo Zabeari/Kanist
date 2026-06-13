@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { defer, Observable } from 'rxjs';
-import { DatabaseService } from '@core/persistence/database.service';
+import { DatabaseClient, DatabaseService } from '@core/persistence/database.service';
 import { base64ToBytes, bytesToBase64 } from '@core/persistence/bytes.util';
 import {
   ProjectAggregate,
@@ -61,21 +61,23 @@ export class CrdtProjectRepository extends ProjectRepository {
     const yDoc = YProjectDocument.create(project.name.value, project.favorite);
     const shareKey = crypto.randomUUID();
 
-    await this.database.execute(
-      `INSERT INTO projects (id, name, favorite, share_key, schema_version, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        project.id,
-        project.name.value,
-        project.favorite ? 1 : 0,
-        shareKey,
-        PROJECT_SCHEMA_VERSION,
-        now,
-        now,
-      ],
-    );
+    await this.database.transaction(async (tx) => {
+      await tx.execute(
+        `INSERT INTO projects (id, name, favorite, share_key, schema_version, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          project.id,
+          project.name.value,
+          project.favorite ? 1 : 0,
+          shareKey,
+          PROJECT_SCHEMA_VERSION,
+          now,
+          now,
+        ],
+      );
 
-    await this.persistProjectState(project.id, yDoc);
+      await this.persistProjectState(project.id, yDoc, tx);
+    });
 
     return project;
   }
@@ -129,14 +131,16 @@ export class CrdtProjectRepository extends ProjectRepository {
     });
 
     const now = Date.now();
-    await this.database.execute(
-      `UPDATE projects
-       SET name = $1, favorite = $2, updated_at = $3
-       WHERE id = $4`,
-      [project.name.value, project.favorite ? 1 : 0, now, project.id],
-    );
+    await this.database.transaction(async (tx) => {
+      await tx.execute(
+        `UPDATE projects
+         SET name = $1, favorite = $2, updated_at = $3
+         WHERE id = $4`,
+        [project.name.value, project.favorite ? 1 : 0, now, project.id],
+      );
 
-    await this.persistProjectState(project.id, existing);
+      await this.persistProjectState(project.id, existing, tx);
+    });
 
     return project;
   }
@@ -150,12 +154,14 @@ export class CrdtProjectRepository extends ProjectRepository {
     yDoc.setMeta({ favorite });
 
     const now = Date.now();
-    await this.database.execute(
-      'UPDATE projects SET favorite = $1, updated_at = $2 WHERE id = $3',
-      [favorite ? 1 : 0, now, projectId],
-    );
+    await this.database.transaction(async (tx) => {
+      await tx.execute(
+        'UPDATE projects SET favorite = $1, updated_at = $2 WHERE id = $3',
+        [favorite ? 1 : 0, now, projectId],
+      );
 
-    await this.persistProjectState(projectId, yDoc);
+      await this.persistProjectState(projectId, yDoc, tx);
+    });
   }
 
   private async loadProjectDocument(projectId: string): Promise<YProjectDocument> {
@@ -171,10 +177,14 @@ export class CrdtProjectRepository extends ProjectRepository {
     return YProjectDocument.load(base64ToBytes(stateRows[0].yjs_state));
   }
 
-  private async persistProjectState(projectId: string, yDoc: YProjectDocument): Promise<void> {
+  private async persistProjectState(
+    projectId: string,
+    yDoc: YProjectDocument,
+    db: DatabaseClient,
+  ): Promise<void> {
     const yjsState = bytesToBase64(yDoc.encodeState());
 
-    await this.database.execute(
+    await db.execute(
       `INSERT INTO project_state (project_id, yjs_state)
        VALUES ($1, $2)
        ON CONFLICT(project_id) DO UPDATE SET yjs_state = excluded.yjs_state`,

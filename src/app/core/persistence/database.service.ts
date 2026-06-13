@@ -3,6 +3,10 @@ import Database from '@tauri-apps/plugin-sql';
 
 const DB_PATH = 'sqlite:kanist.db';
 
+export interface DatabaseClient {
+  execute(sql: string, params?: unknown[]): Promise<void>;
+}
+
 const MIGRATIONS = [
   `CREATE TABLE IF NOT EXISTS projects (
     id              TEXT PRIMARY KEY,
@@ -39,6 +43,25 @@ export class DatabaseService {
   async select<T>(sql: string, params: unknown[] = []): Promise<T[]> {
     const db = await this.getDb();
     return db.select<T[]>(sql, params);
+  }
+
+  async transaction<T>(work: (tx: DatabaseClient) => Promise<T>): Promise<T> {
+    const db = await this.getDb();
+    await db.execute('BEGIN');
+    const tx: DatabaseClient = {
+      execute: async (sql, params = []) => {
+        await db.execute(sql, params);
+      },
+    };
+
+    try {
+      const result = await work(tx);
+      await db.execute('COMMIT');
+      return result;
+    } catch (error) {
+      await db.execute('ROLLBACK');
+      throw error;
+    }
   }
 
   private async doInitialize(): Promise<void> {

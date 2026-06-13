@@ -85,6 +85,9 @@ describe('CrdtProjectRepository', () => {
           useValue: {
             execute: executeMock,
             select: selectMock,
+            transaction: vi.fn(async (work: (tx: { execute: typeof executeMock }) => Promise<unknown>) =>
+              work({ execute: executeMock }),
+            ),
           },
         },
       ],
