@@ -21,59 +21,48 @@ function validProjectName(value: string): ProjectName {
 
 describe('CrdtProjectRepository', () => {
   let repository: CrdtProjectRepository;
-  let executeMock: ReturnType<typeof vi.fn>;
-  let selectMock: ReturnType<typeof vi.fn>;
+  let createProjectMock: ReturnType<typeof vi.fn>;
+  let listProjectsMock: ReturnType<typeof vi.fn>;
+  let getProjectByIdMock: ReturnType<typeof vi.fn>;
+  let getProjectStateMock: ReturnType<typeof vi.fn>;
+  let deleteProjectMock: ReturnType<typeof vi.fn>;
+  let toggleProjectFavoriteMock: ReturnType<typeof vi.fn>;
   const storedStates = new Map<string, string>();
 
   beforeEach(() => {
     storedStates.clear();
-    executeMock = vi.fn(async (sql: string, params: unknown[] = []) => {
-      if (sql.includes('INSERT INTO project_state')) {
-        storedStates.set(String(params[0]), String(params[1]));
-      }
-      if (sql.includes('ON CONFLICT(project_id)')) {
-        storedStates.set(String(params[0]), String(params[1]));
-      }
-      if (sql.startsWith('DELETE FROM projects')) {
-        storedStates.delete(String(params[0]));
-      }
+    createProjectMock = vi.fn(async (params: { id: string; yjsState: string }) => {
+      storedStates.set(params.id, params.yjsState);
     });
-    selectMock = vi.fn(async (sql: string, params: unknown[] = []) => {
-      if (sql.includes('FROM projects WHERE id')) {
-        const id = String(params[0]);
-        if (id === 'missing') {
-          return [];
-        }
-        return [{
-          id,
+    listProjectsMock = vi.fn(async () => [{
+      id: 'p1',
+      name: 'Alpha',
+      favorite: 1,
+      share_key: 'key',
+      schema_version: 1,
+      created_at: 1,
+      updated_at: 1,
+    }]);
+    getProjectByIdMock = vi.fn(async (projectId: string) => {
+      if (projectId === 'p2') {
+        return {
+          id: 'p2',
           name: 'Stored Project',
           favorite: 0,
           share_key: 'key',
           schema_version: 1,
           created_at: 1,
           updated_at: 1,
-        }];
+        };
       }
-      if (sql.includes('FROM projects ORDER BY')) {
-        return [{
-          id: 'p1',
-          name: 'Alpha',
-          favorite: 1,
-          share_key: 'key',
-          schema_version: 1,
-          created_at: 1,
-          updated_at: 1,
-        }];
-      }
-      if (sql.includes('FROM project_state')) {
-        const id = String(params[0]);
-        const state = storedStates.get(id);
-        if (!state) {
-          return [];
-        }
-        return [{ yjs_state: state }];
-      }
-      return [];
+      return null;
+    });
+    getProjectStateMock = vi.fn(async (projectId: string) => storedStates.get(projectId) ?? null);
+    deleteProjectMock = vi.fn(async (projectId: string) => {
+      storedStates.delete(projectId);
+    });
+    toggleProjectFavoriteMock = vi.fn(async (params: { id: string; yjsState: string }) => {
+      storedStates.set(params.id, params.yjsState);
     });
 
     TestBed.configureTestingModule({
@@ -83,11 +72,12 @@ describe('CrdtProjectRepository', () => {
         {
           provide: DatabaseService,
           useValue: {
-            execute: executeMock,
-            select: selectMock,
-            transaction: vi.fn(async (work: (tx: { execute: typeof executeMock }) => Promise<unknown>) =>
-              work({ execute: executeMock }),
-            ),
+            createProject: createProjectMock,
+            listProjects: listProjectsMock,
+            getProjectById: getProjectByIdMock,
+            getProjectState: getProjectStateMock,
+            deleteProject: deleteProjectMock,
+            toggleProjectFavorite: toggleProjectFavoriteMock,
           },
         },
       ],
@@ -106,9 +96,12 @@ describe('CrdtProjectRepository', () => {
     const saved = await firstValueFrom(repository.create(project));
 
     expect(saved.id).toBe('proj-1');
-    expect(executeMock).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO projects'),
-      expect.arrayContaining(['proj-1', 'New Project', 0]),
+    expect(createProjectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'proj-1',
+        name: 'New Project',
+        favorite: false,
+      }),
     );
     expect(storedStates.has('proj-1')).toBe(true);
   });
@@ -124,26 +117,10 @@ describe('CrdtProjectRepository', () => {
   it('findById returns empty sections and tasks for this phase', async () => {
     const yDoc = YProjectDocument.create('Stored Project', false);
     storedStates.set('p2', bytesToBase64(yDoc.encodeState()));
-    selectMock.mockImplementation(async (sql: string, params: unknown[] = []) => {
-      if (sql.includes('FROM projects WHERE id')) {
-        return [{
-          id: String(params[0]),
-          name: 'Stored Project',
-          favorite: 0,
-          share_key: 'key',
-          schema_version: 1,
-          created_at: 1,
-          updated_at: 1,
-        }];
-      }
-      if (sql.includes('FROM project_state')) {
-        return [{ yjs_state: storedStates.get(String(params[0])) }];
-      }
-      return [];
-    });
 
     const aggregate = await firstValueFrom(repository.findById('p2'));
 
+    expect(getProjectByIdMock).toHaveBeenCalledWith('p2');
     expect(aggregate.project.name.value).toBe('Stored Project');
     expect(aggregate.sections).toEqual([]);
     expect(aggregate.tasks).toEqual([]);
@@ -152,10 +129,7 @@ describe('CrdtProjectRepository', () => {
   it('delete removes project row', async () => {
     await firstValueFrom(repository.delete('proj-1'));
 
-    expect(executeMock).toHaveBeenCalledWith(
-      'DELETE FROM projects WHERE id = $1',
-      ['proj-1'],
-    );
+    expect(deleteProjectMock).toHaveBeenCalledWith('proj-1');
   });
 
   it('toggleFavorite updates favorite flag in metadata and state', async () => {
@@ -164,9 +138,11 @@ describe('CrdtProjectRepository', () => {
 
     await firstValueFrom(repository.toggleFavorite('p3', true));
 
-    expect(executeMock).toHaveBeenCalledWith(
-      'UPDATE projects SET favorite = $1, updated_at = $2 WHERE id = $3',
-      [1, expect.any(Number), 'p3'],
+    expect(toggleProjectFavoriteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'p3',
+        favorite: true,
+      }),
     );
     const updated = YProjectDocument.load(
       Uint8Array.from(atob(storedStates.get('p3') ?? ''), (c) => c.charCodeAt(0)),
