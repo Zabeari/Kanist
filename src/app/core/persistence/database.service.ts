@@ -43,32 +43,41 @@ export class DatabaseService {
 
   initialize(): Promise<void> {
     if (!this.initPromise) {
-      this.initPromise = invoke<void>('db_initialize');
+      this.initPromise = invoke<void>('db_initialize').catch((error) => {
+        this.initPromise = null;
+        throw error;
+      });
     }
     return this.initPromise;
   }
 
-  listProjects(): Promise<ProjectRow[]> {
+  async listProjects(): Promise<ProjectRow[]> {
+    await this.initialize();
     return invoke<ProjectRow[]>('db_list_projects');
   }
 
-  getProjectState(projectId: string): Promise<string | null> {
+  async getProjectState(projectId: string): Promise<string | null> {
+    await this.initialize();
     return invoke<string | null>('db_get_project_state', { projectId });
   }
 
-  createProject(params: CreateProjectParams): Promise<void> {
+  async createProject(params: CreateProjectParams): Promise<void> {
+    await this.initialize();
     return invoke<void>('db_create_project', { params });
   }
 
-  updateProject(params: UpdateProjectParams): Promise<void> {
+  async updateProject(params: UpdateProjectParams): Promise<void> {
+    await this.initialize();
     return invoke<void>('db_update_project', { params });
   }
 
-  toggleProjectFavorite(params: ToggleProjectFavoriteParams): Promise<void> {
+  async toggleProjectFavorite(params: ToggleProjectFavoriteParams): Promise<void> {
+    await this.initialize();
     return invoke<void>('db_toggle_project_favorite', { params });
   }
 
-  deleteProject(projectId: string): Promise<void> {
+  async deleteProject(projectId: string): Promise<void> {
+    await this.initialize();
     return invoke<void>('db_delete_project', { projectId });
   }
 }
