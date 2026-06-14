@@ -1,84 +1,74 @@
 import { Injectable } from '@angular/core';
-import Database from '@tauri-apps/plugin-sql';
+import { invoke } from '@tauri-apps/api/core';
 
-const DB_PATH = 'sqlite:kanist.db';
-
-export interface DatabaseClient {
-  execute(sql: string, params?: unknown[]): Promise<void>;
+export interface ProjectRow {
+  id: string;
+  name: string;
+  favorite: number;
+  share_key: string;
+  schema_version: number;
+  created_at: number;
+  updated_at: number;
 }
 
-const MIGRATIONS = [
-  `CREATE TABLE IF NOT EXISTS projects (
-    id              TEXT PRIMARY KEY,
-    name            TEXT NOT NULL,
-    favorite        INTEGER NOT NULL DEFAULT 0,
-    share_key       TEXT NOT NULL,
-    schema_version  INTEGER NOT NULL DEFAULT 1,
-    created_at      INTEGER NOT NULL,
-    updated_at      INTEGER NOT NULL
-  )`,
-  `CREATE TABLE IF NOT EXISTS project_state (
-    project_id  TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
-    yjs_state   TEXT NOT NULL
-  )`,
-];
+export interface CreateProjectParams {
+  id: string;
+  name: string;
+  favorite: boolean;
+  shareKey: string;
+  schemaVersion: number;
+  createdAt: number;
+  updatedAt: number;
+  yjsState: string;
+}
+
+export interface UpdateProjectParams {
+  id: string;
+  name: string;
+  favorite: boolean;
+  updatedAt: number;
+  yjsState: string;
+}
+
+export interface ToggleProjectFavoriteParams {
+  id: string;
+  favorite: boolean;
+  updatedAt: number;
+  yjsState: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class DatabaseService {
-  private db: Database | null = null;
   private initPromise: Promise<void> | null = null;
 
   initialize(): Promise<void> {
     if (!this.initPromise) {
-      this.initPromise = this.doInitialize();
+      this.initPromise = invoke<void>('db_initialize');
     }
     return this.initPromise;
   }
 
-  async execute(sql: string, params: unknown[] = []): Promise<void> {
-    const db = await this.getDb();
-    await db.execute(sql, params);
+  listProjects(): Promise<ProjectRow[]> {
+    return invoke<ProjectRow[]>('db_list_projects');
   }
 
-  async select<T>(sql: string, params: unknown[] = []): Promise<T[]> {
-    const db = await this.getDb();
-    return db.select<T[]>(sql, params);
+  getProjectState(projectId: string): Promise<string | null> {
+    return invoke<string | null>('db_get_project_state', { projectId });
   }
 
-  async transaction<T>(work: (tx: DatabaseClient) => Promise<T>): Promise<T> {
-    const db = await this.getDb();
-    await db.execute('BEGIN');
-    const tx: DatabaseClient = {
-      execute: async (sql, params = []) => {
-        await db.execute(sql, params);
-      },
-    };
-
-    try {
-      const result = await work(tx);
-      await db.execute('COMMIT');
-      return result;
-    } catch (error) {
-      await db.execute('ROLLBACK');
-      throw error;
-    }
+  createProject(params: CreateProjectParams): Promise<void> {
+    return invoke<void>('db_create_project', { params });
   }
 
-  private async doInitialize(): Promise<void> {
-    this.db = await Database.load(DB_PATH);
-    await this.db.execute('PRAGMA foreign_keys = ON');
-    for (const sql of MIGRATIONS) {
-      await this.db.execute(sql);
-    }
+  updateProject(params: UpdateProjectParams): Promise<void> {
+    return invoke<void>('db_update_project', { params });
   }
 
-  private async getDb(): Promise<Database> {
-    if (!this.db) {
-      await this.initialize();
-    }
-    if (!this.db) {
-      throw new Error('Database failed to initialize');
-    }
-    return this.db;
+  toggleProjectFavorite(params: ToggleProjectFavoriteParams): Promise<void> {
+    return invoke<void>('db_toggle_project_favorite', { params });
+  }
+
+  deleteProject(projectId: string): Promise<void> {
+    return invoke<void>('db_delete_project', { projectId });
   }
 }
