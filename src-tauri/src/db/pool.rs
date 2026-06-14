@@ -1,5 +1,4 @@
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
-use std::str::FromStr;
 use tauri::{AppHandle, Manager};
 
 use super::migrations;
@@ -12,12 +11,9 @@ pub async fn init(app: &AppHandle) -> Result<SqlitePool, String> {
     std::fs::create_dir_all(&app_path).map_err(|error| error.to_string())?;
 
     let db_path = app_path.join("kanist.db");
-    let connect_options = SqliteConnectOptions::from_str(&format!(
-        "sqlite:{}",
-        db_path.to_string_lossy()
-    ))
-    .map_err(|error| error.to_string())?
-    .create_if_missing(true);
+    let connect_options = SqliteConnectOptions::new()
+        .filename(db_path)
+        .create_if_missing(true);
 
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
