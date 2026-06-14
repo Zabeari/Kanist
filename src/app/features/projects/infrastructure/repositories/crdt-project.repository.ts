@@ -61,8 +61,7 @@ export class CrdtProjectRepository extends ProjectRepository {
   }
 
   private async findProjectById(projectId: string): Promise<ProjectAggregate> {
-    const rows = await this.database.listProjects();
-    const row = rows.find((project) => project.id === projectId);
+    const row = await this.database.getProjectById(projectId);
 
     if (!row) {
       throw new Error(`Project not found: ${projectId}`);

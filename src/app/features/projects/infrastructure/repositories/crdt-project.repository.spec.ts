@@ -23,6 +23,7 @@ describe('CrdtProjectRepository', () => {
   let repository: CrdtProjectRepository;
   let createProjectMock: ReturnType<typeof vi.fn>;
   let listProjectsMock: ReturnType<typeof vi.fn>;
+  let getProjectByIdMock: ReturnType<typeof vi.fn>;
   let getProjectStateMock: ReturnType<typeof vi.fn>;
   let deleteProjectMock: ReturnType<typeof vi.fn>;
   let toggleProjectFavoriteMock: ReturnType<typeof vi.fn>;
@@ -42,6 +43,20 @@ describe('CrdtProjectRepository', () => {
       created_at: 1,
       updated_at: 1,
     }]);
+    getProjectByIdMock = vi.fn(async (projectId: string) => {
+      if (projectId === 'p2') {
+        return {
+          id: 'p2',
+          name: 'Stored Project',
+          favorite: 0,
+          share_key: 'key',
+          schema_version: 1,
+          created_at: 1,
+          updated_at: 1,
+        };
+      }
+      return null;
+    });
     getProjectStateMock = vi.fn(async (projectId: string) => storedStates.get(projectId) ?? null);
     deleteProjectMock = vi.fn(async (projectId: string) => {
       storedStates.delete(projectId);
@@ -59,6 +74,7 @@ describe('CrdtProjectRepository', () => {
           useValue: {
             createProject: createProjectMock,
             listProjects: listProjectsMock,
+            getProjectById: getProjectByIdMock,
             getProjectState: getProjectStateMock,
             deleteProject: deleteProjectMock,
             toggleProjectFavorite: toggleProjectFavoriteMock,
@@ -101,18 +117,10 @@ describe('CrdtProjectRepository', () => {
   it('findById returns empty sections and tasks for this phase', async () => {
     const yDoc = YProjectDocument.create('Stored Project', false);
     storedStates.set('p2', bytesToBase64(yDoc.encodeState()));
-    listProjectsMock.mockResolvedValue([{
-      id: 'p2',
-      name: 'Stored Project',
-      favorite: 0,
-      share_key: 'key',
-      schema_version: 1,
-      created_at: 1,
-      updated_at: 1,
-    }]);
 
     const aggregate = await firstValueFrom(repository.findById('p2'));
 
+    expect(getProjectByIdMock).toHaveBeenCalledWith('p2');
     expect(aggregate.project.name.value).toBe('Stored Project');
     expect(aggregate.sections).toEqual([]);
     expect(aggregate.tasks).toEqual([]);

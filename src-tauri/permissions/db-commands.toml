@@ -4,6 +4,7 @@ description = "Enables local SQLite persistence commands."
 commands.allow = [
   "db_initialize",
   "db_list_projects",
+  "db_get_project_by_id",
   "db_get_project_state",
   "db_create_project",
   "db_update_project",

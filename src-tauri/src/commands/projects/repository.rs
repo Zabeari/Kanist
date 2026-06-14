@@ -15,6 +15,18 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<ProjectRow>, String> {
     .map_err(|error| error.to_string())
 }
 
+pub async fn get_by_id(pool: &SqlitePool, project_id: &str) -> Result<Option<ProjectRow>, String> {
+    sqlx::query_as::<_, ProjectRow>(
+        "SELECT id, name, favorite, share_key, schema_version, created_at, updated_at
+         FROM projects
+         WHERE id = $1",
+    )
+    .bind(project_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|error| error.to_string())
+}
+
 pub async fn get_state(pool: &SqlitePool, project_id: &str) -> Result<Option<String>, String> {
     sqlx::query_scalar("SELECT yjs_state FROM project_state WHERE project_id = $1")
         .bind(project_id)

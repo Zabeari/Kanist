@@ -11,6 +11,14 @@ pub async fn db_list_projects(state: State<'_, DbState>) -> Result<Vec<super::dt
 }
 
 #[tauri::command]
+pub async fn db_get_project_by_id(
+    state: State<'_, DbState>,
+    project_id: String,
+) -> Result<Option<super::dto::ProjectRow>, String> {
+    repository::get_by_id(&state.0, &project_id).await
+}
+
+#[tauri::command]
 pub async fn db_get_project_state(
     state: State<'_, DbState>,
     project_id: String,

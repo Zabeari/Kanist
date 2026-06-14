@@ -56,6 +56,11 @@ export class DatabaseService {
     return invoke<ProjectRow[]>('db_list_projects');
   }
 
+  async getProjectById(projectId: string): Promise<ProjectRow | null> {
+    await this.initialize();
+    return invoke<ProjectRow | null>('db_get_project_by_id', { projectId });
+  }
+
   async getProjectState(projectId: string): Promise<string | null> {
     await this.initialize();
     return invoke<string | null>('db_get_project_state', { projectId });
