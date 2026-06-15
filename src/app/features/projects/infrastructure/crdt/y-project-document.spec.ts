@@ -131,5 +131,19 @@ describe('YProjectDocument', () => {
 
       expect(() => corrupted.getSections(projectId)).toThrow(/sec-missing/);
     });
+
+    it('getSections throws when taskOrder contains non-string entries', () => {
+      const doc = YProjectDocument.create('Project', false);
+      doc.createSection(Section.create('Backlog', projectId, 'sec-1'));
+      const yDoc = new Y.Doc();
+      Y.applyUpdate(yDoc, doc.encodeState());
+      const sectionMap = yDoc.getMap('sections').get('sec-1') as Y.Map<unknown>;
+      const taskOrder = sectionMap.get('taskOrder') as Y.Array<unknown>;
+      taskOrder.push([123]);
+
+      const corrupted = YProjectDocument.load(Y.encodeStateAsUpdate(yDoc));
+
+      expect(() => corrupted.getSections(projectId)).toThrow(/taskOrder\[0\] must be a string/);
+    });
   });
 });

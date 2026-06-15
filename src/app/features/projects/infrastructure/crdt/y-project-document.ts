@@ -175,6 +175,16 @@ export class YProjectDocument {
       );
     }
 
-    return taskOrder.toArray();
+    const taskIds = taskOrder.toArray();
+    for (let index = 0; index < taskIds.length; index++) {
+      const taskId = taskIds[index];
+      if (typeof taskId !== 'string') {
+        throw new Error(
+          `YProjectDocument(doc=${this.doc.guid}): section "${sectionId}" taskOrder[${index}] must be a string, got ${typeof taskId}`,
+        );
+      }
+    }
+
+    return taskIds;
   }
 }
