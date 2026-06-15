@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { CrdtProjectRepository } from './crdt-project.repository';
 import { DatabaseService } from '@core/persistence/database.service';
 import { Project } from '@features/projects/domain/entities/project.entity';
+import { Section } from '@features/projects/domain/entities/section.entity';
 import { ProjectName } from '@features/projects/domain/value-objects/project-name.value-object';
 import { bytesToBase64 } from '@core/persistence/bytes.util';
 import { YProjectDocument } from '@features/projects/infrastructure/crdt/y-project-document';
@@ -114,15 +115,18 @@ describe('CrdtProjectRepository', () => {
     expect(summaries[0].pendingCount).toBe(0);
   });
 
-  it('findById returns empty sections and tasks for this phase', async () => {
-    const yDoc = YProjectDocument.create('Stored Project', false);
-    storedStates.set('p2', bytesToBase64(yDoc.encodeState()));
+  it('findById returns sections from yjs doc', async () => {
+    const docWithSections = YProjectDocument.create('Stored Project', false);
+    docWithSections.createSection(Section.create('Backlog', 'p2', 'sec-1'));
+    storedStates.set('p2', bytesToBase64(docWithSections.encodeState()));
 
     const aggregate = await firstValueFrom(repository.findById('p2'));
 
     expect(getProjectByIdMock).toHaveBeenCalledWith('p2');
     expect(aggregate.project.name.value).toBe('Stored Project');
-    expect(aggregate.sections).toEqual([]);
+    expect(aggregate.project.sectionIds).toEqual(['sec-1']);
+    expect(aggregate.sections).toHaveLength(1);
+    expect(aggregate.sections[0].name).toBe('Backlog');
     expect(aggregate.tasks).toEqual([]);
   });
 

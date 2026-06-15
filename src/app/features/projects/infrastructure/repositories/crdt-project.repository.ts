@@ -74,10 +74,12 @@ export class CrdtProjectRepository extends ProjectRepository {
 
     const yDoc = YProjectDocument.load(base64ToBytes(yjsState));
     const meta = yDoc.getMeta();
+    const sectionOrder = yDoc.getSectionOrder();
+    const sections = yDoc.getSections(row.id);
 
     return {
-      project: this.toProject(row.id, meta.name, meta.favorite),
-      sections: [],
+      project: this.toProject(row.id, meta.name, meta.favorite, sectionOrder),
+      sections,
       tasks: [],
     };
   }
@@ -134,10 +136,15 @@ export class CrdtProjectRepository extends ProjectRepository {
     return YProjectDocument.load(base64ToBytes(yjsState));
   }
 
-  private toProject(id: string, name: string, favorite: boolean): Project {
+  private toProject(
+    id: string,
+    name: string,
+    favorite: boolean,
+    sectionIds: readonly string[] = [],
+  ): Project {
     const nameResult = ProjectName.tryCreate(name);
     if (nameResult.success) {
-      return new Project(id, nameResult.value, favorite, []);
+      return new Project(id, nameResult.value, favorite, sectionIds);
     }
 
     const fallback = ProjectName.tryCreate('Untitled');
@@ -145,6 +152,6 @@ export class CrdtProjectRepository extends ProjectRepository {
       throw new Error('Failed to map project name');
     }
 
-    return new Project(id, fallback.value, favorite, []);
+    return new Project(id, fallback.value, favorite, sectionIds);
   }
 }
