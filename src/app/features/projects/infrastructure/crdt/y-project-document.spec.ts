@@ -1,5 +1,6 @@
 import * as Y from 'yjs';
 import { describe, expect, it } from 'vitest';
+import { Section } from '@features/projects/domain/entities/section.entity';
 import { PROJECT_SCHEMA_VERSION, YProjectDocument } from './y-project-document';
 
 describe('YProjectDocument', () => {
@@ -63,5 +64,72 @@ describe('YProjectDocument', () => {
     const loaded = YProjectDocument.load(Y.encodeStateAsUpdate(doc));
 
     expect(() => loaded.getMeta()).toThrow(/meta\.name must be a string/);
+  });
+
+  describe('sections', () => {
+    const projectId = 'proj-1';
+
+    it('createSection adds section to sectionOrder and sections map', () => {
+      const doc = YProjectDocument.create('Project', false);
+      const section = Section.create('Backlog', projectId, 'sec-1');
+
+      doc.createSection(section);
+
+      expect(doc.getSectionOrder()).toEqual(['sec-1']);
+      expect(doc.getSections(projectId)).toEqual([section]);
+    });
+
+    it('updateSection changes section name', () => {
+      const doc = YProjectDocument.create('Project', false);
+      const section = Section.create('Backlog', projectId, 'sec-1');
+      doc.createSection(section);
+
+      doc.updateSection('sec-1', 'In Progress');
+
+      expect(doc.getSections(projectId)[0].name).toBe('In Progress');
+    });
+
+    it('deleteSection removes section from order and map', () => {
+      const doc = YProjectDocument.create('Project', false);
+      doc.createSection(Section.create('Backlog', projectId, 'sec-1'));
+      doc.createSection(Section.create('Done', projectId, 'sec-2'));
+
+      doc.deleteSection('sec-1');
+
+      expect(doc.getSectionOrder()).toEqual(['sec-2']);
+      expect(doc.getSections(projectId)).toHaveLength(1);
+      expect(doc.getSections(projectId)[0].id).toBe('sec-2');
+    });
+
+    it('persists sections through encode/load round-trip', () => {
+      const original = YProjectDocument.create('Project', false);
+      original.createSection(Section.create('Backlog', projectId, 'sec-1'));
+
+      const loaded = YProjectDocument.load(original.encodeState());
+
+      expect(loaded.getSectionOrder()).toEqual(['sec-1']);
+      expect(loaded.getSections(projectId)[0].name).toBe('Backlog');
+    });
+
+    it('createSection throws when section id already exists', () => {
+      const doc = YProjectDocument.create('Project', false);
+      doc.createSection(Section.create('Backlog', projectId, 'sec-1'));
+
+      expect(() => doc.createSection(Section.create('Duplicate', projectId, 'sec-1'))).toThrow(
+        /already exists/,
+      );
+    });
+
+    it('getSections throws when section map entry is missing', () => {
+      const doc = YProjectDocument.create('Project', false);
+      doc.createSection(Section.create('Backlog', projectId, 'sec-1'));
+      const yDoc = new Y.Doc();
+      Y.applyUpdate(yDoc, doc.encodeState());
+      yDoc.getArray<string>('sectionOrder').push(['sec-missing']);
+
+      const corrupted = YProjectDocument.load(Y.encodeStateAsUpdate(yDoc));
+
+      expect(() => corrupted.getSections(projectId)).toThrow(/sec-missing/);
+    });
   });
 });
