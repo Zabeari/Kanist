@@ -1,4 +1,5 @@
 import * as Y from 'yjs';
+import { Section } from '@features/projects/domain/entities/section.entity';
 
 export const PROJECT_SCHEMA_VERSION = 1;
 
@@ -68,5 +69,122 @@ export class YProjectDocument {
     if (meta.favorite !== undefined) {
       map.set('favorite', meta.favorite);
     }
+  }
+
+  getSectionOrder(): string[] {
+    const sectionOrder = this.doc.getArray<string>('sectionOrder');
+    return sectionOrder.toArray();
+  }
+
+  getSections(projectId: string): Section[] {
+    const sectionOrder = this.getSectionOrder();
+    const sectionsMap = this.doc.getMap('sections');
+
+    return sectionOrder.map((sectionId) => {
+      const sectionMap = sectionsMap.get(sectionId);
+      if (!(sectionMap instanceof Y.Map)) {
+        throw new Error(
+          `YProjectDocument(doc=${this.doc.guid}): section "${sectionId}" is missing or not a Y.Map`,
+        );
+      }
+
+      const name = this.readSectionName(sectionId, sectionMap);
+      const taskOrder = this.readTaskOrder(sectionId, sectionMap);
+
+      return new Section(sectionId, name, projectId, taskOrder);
+    });
+  }
+
+  createSection(section: Section): void {
+    const sectionOrder = this.doc.getArray<string>('sectionOrder');
+    const sectionsMap = this.doc.getMap('sections');
+
+    if (sectionsMap.has(section.id)) {
+      throw new Error(
+        `YProjectDocument(doc=${this.doc.guid}): section "${section.id}" already exists`,
+      );
+    }
+
+    const sectionMap = new Y.Map<unknown>();
+    sectionMap.set('name', section.name);
+    sectionMap.set('taskOrder', Y.Array.from([...section.taskIds]));
+
+    sectionsMap.set(section.id, sectionMap);
+    sectionOrder.push([section.id]);
+  }
+
+  updateSection(sectionId: string, name: string): void {
+    const sectionMap = this.getSectionMap(sectionId);
+    sectionMap.set('name', name);
+  }
+
+  deleteSection(sectionId: string): void {
+    const sectionOrder = this.doc.getArray<string>('sectionOrder');
+    const sectionsMap = this.doc.getMap('sections');
+
+    const index = sectionOrder.toArray().indexOf(sectionId);
+    if (index === -1) {
+      throw new Error(
+        `YProjectDocument(doc=${this.doc.guid}): section "${sectionId}" not found in sectionOrder`,
+      );
+    }
+
+    sectionOrder.delete(index, 1);
+    sectionsMap.delete(sectionId);
+  }
+
+  private getSectionMap(sectionId: string): Y.Map<unknown> {
+    const sectionsMap = this.doc.getMap('sections');
+    const sectionMap = sectionsMap.get(sectionId);
+
+    if (!(sectionMap instanceof Y.Map)) {
+      throw new Error(
+        `YProjectDocument(doc=${this.doc.guid}): section "${sectionId}" is missing or not a Y.Map`,
+      );
+    }
+
+    return sectionMap;
+  }
+
+  private readSectionName(sectionId: string, sectionMap: Y.Map<unknown>): string {
+    if (!sectionMap.has('name')) {
+      throw new Error(
+        `YProjectDocument(doc=${this.doc.guid}): section "${sectionId}" name is missing`,
+      );
+    }
+
+    const name = sectionMap.get('name');
+    if (typeof name !== 'string') {
+      throw new Error(
+        `YProjectDocument(doc=${this.doc.guid}): section "${sectionId}" name must be a string, got ${typeof name}`,
+      );
+    }
+
+    return name;
+  }
+
+  private readTaskOrder(sectionId: string, sectionMap: Y.Map<unknown>): string[] {
+    if (!sectionMap.has('taskOrder')) {
+      return [];
+    }
+
+    const taskOrder = sectionMap.get('taskOrder');
+    if (!(taskOrder instanceof Y.Array)) {
+      throw new Error(
+        `YProjectDocument(doc=${this.doc.guid}): section "${sectionId}" taskOrder must be a Y.Array`,
+      );
+    }
+
+    const taskIds = taskOrder.toArray();
+    for (let index = 0; index < taskIds.length; index++) {
+      const taskId = taskIds[index];
+      if (typeof taskId !== 'string') {
+        throw new Error(
+          `YProjectDocument(doc=${this.doc.guid}): section "${sectionId}" taskOrder[${index}] must be a string, got ${typeof taskId}`,
+        );
+      }
+    }
+
+    return taskIds;
   }
 }

@@ -85,4 +85,9 @@ export class DatabaseService {
     await this.initialize();
     return invoke<void>('db_delete_project', { projectId });
   }
+
+  async updateProjectState(projectId: string, yjsState: string): Promise<void> {
+    await this.initialize();
+    return invoke<void>('db_update_project_state', { projectId, yjsState });
+  }
 }

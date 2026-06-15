@@ -8,6 +8,7 @@ commands.allow = [
   "db_get_project_state",
   "db_create_project",
   "db_update_project",
+  "db_update_project_state",
   "db_toggle_project_favorite",
   "db_delete_project",
 ]

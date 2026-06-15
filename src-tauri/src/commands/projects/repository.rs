@@ -110,6 +110,16 @@ pub async fn delete(pool: &SqlitePool, project_id: &str) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
+pub async fn update_state(
+    pool: &SqlitePool,
+    project_id: &str,
+    yjs_state: &str,
+) -> Result<(), String> {
+    let mut tx = pool.begin().await.map_err(|error| error.to_string())?;
+    upsert_state(&mut tx, project_id, yjs_state).await?;
+    tx.commit().await.map_err(|error| error.to_string())
+}
+
 async fn upsert_state(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     project_id: &str,

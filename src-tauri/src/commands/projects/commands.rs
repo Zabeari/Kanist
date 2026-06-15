@@ -57,3 +57,12 @@ pub async fn db_delete_project(
 ) -> Result<(), String> {
     repository::delete(&state.0, &project_id).await
 }
+
+#[tauri::command]
+pub async fn db_update_project_state(
+    state: State<'_, DbState>,
+    project_id: String,
+    yjs_state: String,
+) -> Result<(), String> {
+    repository::update_state(&state.0, &project_id, &yjs_state).await
+}
