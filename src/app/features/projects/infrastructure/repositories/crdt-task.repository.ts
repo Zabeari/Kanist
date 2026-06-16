@@ -55,11 +55,12 @@ export class CrdtTaskRepository extends TaskRepository {
 
   private async completeTask(
     projectId: string,
-    _sectionId: string,
+    sectionId: string,
     taskId: string,
     completedDate: string,
   ): Promise<Task> {
     const yDoc = await this.loadProjectDocument(projectId);
+    this.requireTaskInSection(yDoc, projectId, sectionId, taskId);
     yDoc.completeTask(taskId, new Date(completedDate));
     await this.persistProjectState(projectId, yDoc);
 
@@ -73,10 +74,11 @@ export class CrdtTaskRepository extends TaskRepository {
 
   private async uncompleteTask(
     projectId: string,
-    _sectionId: string,
+    sectionId: string,
     taskId: string,
   ): Promise<Task> {
     const yDoc = await this.loadProjectDocument(projectId);
+    this.requireTaskInSection(yDoc, projectId, sectionId, taskId);
     yDoc.uncompleteTask(taskId);
     await this.persistProjectState(projectId, yDoc);
 
@@ -90,24 +92,38 @@ export class CrdtTaskRepository extends TaskRepository {
 
   private async deleteTask(
     projectId: string,
-    _sectionId: string,
+    sectionId: string,
     taskId: string,
   ): Promise<void> {
     const yDoc = await this.loadProjectDocument(projectId);
+    this.requireTaskInSection(yDoc, projectId, sectionId, taskId);
     yDoc.deleteTask(taskId);
     await this.persistProjectState(projectId, yDoc);
   }
 
   private async findTaskById(
     projectId: string,
-    _sectionId: string,
+    sectionId: string,
     taskId: string,
   ): Promise<Task> {
     const yDoc = await this.loadProjectDocument(projectId);
+    return this.requireTaskInSection(yDoc, projectId, sectionId, taskId);
+  }
+
+  private requireTaskInSection(
+    yDoc: YProjectDocument,
+    projectId: string,
+    sectionId: string,
+    taskId: string,
+  ): Task {
     const task = yDoc.findTask(taskId);
 
     if (!task) {
       throw new Error(`Task not found: ${taskId} in project ${projectId}`);
+    }
+
+    if (task.sectionId !== sectionId) {
+      throw new Error(`Task ${taskId} does not belong to section ${sectionId} in project ${projectId}`);
     }
 
     return task;

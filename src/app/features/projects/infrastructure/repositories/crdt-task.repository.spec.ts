@@ -131,4 +131,27 @@ describe('CrdtTaskRepository', () => {
       /Task not found/,
     );
   });
+
+  it.each([
+    [
+      'complete',
+      async () =>
+        firstValueFrom(repository.complete(projectId, 'wrong-section', 'task-1', '2025-03-01')),
+    ],
+    [
+      'uncomplete',
+      async () => firstValueFrom(repository.uncomplete(projectId, 'wrong-section', 'task-1')),
+    ],
+    ['delete', async () => firstValueFrom(repository.delete(projectId, 'wrong-section', 'task-1'))],
+    [
+      'findById',
+      async () => firstValueFrom(repository.findById(projectId, 'wrong-section', 'task-1')),
+    ],
+  ])('%s rejects wrong sectionId', async (_, run) => {
+    const task = Task.create('Task A', sectionId, startDate, 'task-1');
+    await firstValueFrom(repository.create(projectId, task));
+
+    await expect(run()).rejects.toThrow(/does not belong to section/);
+    expect(loadStoredDoc().findTask('task-1')).toEqual(task);
+  });
 });
