@@ -268,5 +268,27 @@ describe('YProjectDocument', () => {
 
       expect(() => corrupted.getTasks()).toThrow(/task "task-1" name must be a string/);
     });
+
+    it('completeTask throws when completedDate is invalid', () => {
+      const doc = createDocWithSection();
+      doc.createTask(Task.create('Task A', sectionId, startDate, 'task-1'));
+
+      expect(() => doc.completeTask('task-1', new Date(Number.NaN))).toThrow(
+        /completedDate must be a finite timestamp/,
+      );
+    });
+
+    it('getTasks throws when stored timestamp is not finite', () => {
+      const doc = createDocWithSection();
+      doc.createTask(Task.create('Task A', sectionId, startDate, 'task-1'));
+      const yDoc = new Y.Doc();
+      Y.applyUpdate(yDoc, doc.encodeState());
+      const taskMap = yDoc.getMap('tasks').get('task-1') as Y.Map<unknown>;
+      taskMap.set('startDate', Number.NaN);
+
+      const corrupted = YProjectDocument.load(Y.encodeStateAsUpdate(yDoc));
+
+      expect(() => corrupted.getTasks()).toThrow(/startDate must be a finite timestamp/);
+    });
   });
 });

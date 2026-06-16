@@ -246,7 +246,10 @@ export class YProjectDocument {
   completeTask(taskId: string, completedDate: Date): void {
     const taskMap = this.getTaskMap(taskId);
     taskMap.set('completed', true);
-    taskMap.set('completedDate', completedDate.getTime());
+    taskMap.set(
+      'completedDate',
+      this.dateToEpochMs(completedDate, `task "${taskId}" completedDate`),
+    );
   }
 
   uncompleteTask(taskId: string): void {
@@ -417,7 +420,21 @@ export class YProjectDocument {
       return;
     }
 
-    taskMap.set(key, value.getTime());
+    taskMap.set(key, this.dateToEpochMs(value, `task field "${key}"`));
+  }
+
+  private dateToEpochMs(date: Date, context: string): number {
+    return this.assertValidEpochMs(date.getTime(), context);
+  }
+
+  private assertValidEpochMs(epochMs: number, context: string): number {
+    if (!Number.isFinite(epochMs)) {
+      throw new Error(
+        `YProjectDocument(doc=${this.doc.guid}): ${context} must be a finite timestamp, got ${epochMs}`,
+      );
+    }
+
+    return epochMs;
   }
 
   private readRequiredString(taskId: string, field: string, value: unknown): string {
@@ -477,6 +494,7 @@ export class YProjectDocument {
       );
     }
 
-    return new Date(value);
+    const epochMs = this.assertValidEpochMs(value, `task "${taskId}" ${field}`);
+    return new Date(epochMs);
   }
 }
