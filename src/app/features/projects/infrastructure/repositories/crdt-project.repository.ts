@@ -76,11 +76,12 @@ export class CrdtProjectRepository extends ProjectRepository {
     const meta = yDoc.getMeta();
     const sectionOrder = yDoc.getSectionOrder();
     const sections = yDoc.getSections(row.id);
+    const tasks = yDoc.getTasks();
 
     return {
       project: this.toProject(row.id, meta.name, meta.favorite, sectionOrder),
       sections,
-      tasks: [],
+      tasks,
     };
   }
 

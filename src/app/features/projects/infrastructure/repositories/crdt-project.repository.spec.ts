@@ -7,6 +7,7 @@ import { CrdtProjectRepository } from './crdt-project.repository';
 import { DatabaseService } from '@core/persistence/database.service';
 import { Project } from '@features/projects/domain/entities/project.entity';
 import { Section } from '@features/projects/domain/entities/section.entity';
+import { Task } from '@features/projects/domain/entities/task.entity';
 import { ProjectName } from '@features/projects/domain/value-objects/project-name.value-object';
 import { bytesToBase64 } from '@core/persistence/bytes.util';
 import { YProjectDocument } from '@features/projects/infrastructure/crdt/y-project-document';
@@ -115,9 +116,12 @@ describe('CrdtProjectRepository', () => {
     expect(summaries[0].pendingCount).toBe(0);
   });
 
-  it('findById returns sections from yjs doc', async () => {
+  it('findById returns sections and tasks from yjs doc', async () => {
     const docWithSections = YProjectDocument.create('Stored Project', false);
     docWithSections.createSection(Section.create('Backlog', 'p2', 'sec-1'));
+    docWithSections.createTask(
+      Task.create('Task A', 'sec-1', new Date('2025-01-15T00:00:00.000Z'), 'task-1'),
+    );
     storedStates.set('p2', bytesToBase64(docWithSections.encodeState()));
 
     const aggregate = await firstValueFrom(repository.findById('p2'));
@@ -127,7 +131,9 @@ describe('CrdtProjectRepository', () => {
     expect(aggregate.project.sectionIds).toEqual(['sec-1']);
     expect(aggregate.sections).toHaveLength(1);
     expect(aggregate.sections[0].name).toBe('Backlog');
-    expect(aggregate.tasks).toEqual([]);
+    expect(aggregate.sections[0].taskIds).toEqual(['task-1']);
+    expect(aggregate.tasks).toHaveLength(1);
+    expect(aggregate.tasks[0].name).toBe('Task A');
   });
 
   it('delete removes project row', async () => {
