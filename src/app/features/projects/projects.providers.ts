@@ -4,7 +4,7 @@ import { SectionRepository } from '@features/projects/domain/repositories/sectio
 import { TaskRepository } from '@features/projects/domain/repositories/task.repository';
 import { CrdtProjectRepository } from '@features/projects/infrastructure/repositories/crdt-project.repository';
 import { CrdtSectionRepository } from '@features/projects/infrastructure/repositories/crdt-section.repository';
-import { HttpTaskRepository } from '@features/projects/infrastructure/repositories/http-task.repository';
+import { CrdtTaskRepository } from '@features/projects/infrastructure/repositories/crdt-task.repository';
 import { LoadProjectUseCase } from '@features/projects/application/use-cases/projects/load-project/load-project.use-case';
 import { LoadAllProjectsUseCase } from '@features/projects/application/use-cases/projects/load-all-projects/load-all-projects.use-case';
 import { CreateProjectUseCase } from '@features/projects/application/use-cases/projects/create-project/create-project.use-case';
@@ -23,7 +23,7 @@ export const PROJECT_FEATURE_PROVIDERS: Provider[] = [
   // Repositories
   { provide: ProjectRepository, useClass: CrdtProjectRepository },
   { provide: SectionRepository, useClass: CrdtSectionRepository },
-  { provide: TaskRepository, useClass: HttpTaskRepository },
+  { provide: TaskRepository, useClass: CrdtTaskRepository },
 
   // Use Cases
   LoadProjectUseCase,
