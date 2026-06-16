@@ -237,6 +237,19 @@ describe('YProjectDocument', () => {
       expect(doc.findTask('task-parent')?.subtaskIds).toEqual([]);
     });
 
+    it('deleteTask cascades to subtasks when parent is deleted', () => {
+      const doc = createDocWithSection();
+      doc.createTask(Task.create('Parent', sectionId, startDate, 'task-parent'));
+      doc.createTask(Task.create('Subtask', sectionId, startDate, 'task-sub', 'task-parent'));
+
+      doc.deleteTask('task-parent');
+
+      expect(doc.findTask('task-parent')).toBeUndefined();
+      expect(doc.findTask('task-sub')).toBeUndefined();
+      expect(doc.getTasks()).toEqual([]);
+      expect(doc.getSections(projectId)[0].taskIds).toEqual([]);
+    });
+
     it('persists tasks through encode/load round-trip', () => {
       const original = createDocWithSection();
       original.createTask(Task.create('Task A', sectionId, startDate, 'task-1'));

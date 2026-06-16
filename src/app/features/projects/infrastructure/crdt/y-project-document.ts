@@ -260,6 +260,12 @@ export class YProjectDocument {
 
   deleteTask(taskId: string): void {
     const taskMap = this.getTaskMap(taskId);
+    const subtaskIds = this.readSubtaskOrder(taskId, taskMap);
+
+    for (const subtaskId of subtaskIds) {
+      this.deleteTask(subtaskId);
+    }
+
     const sectionId = this.readRequiredString(taskId, 'sectionId', taskMap.get('sectionId'));
     const parentTaskId = this.readOptionalString(taskId, 'parentTaskId', taskMap.get('parentTaskId'));
 
