@@ -172,67 +172,10 @@
     color: var(--detail-muted);
   }
 
-  .task-detail__meta-control {
-    position: relative;
-    min-height: 1.375rem;
-    display: flex;
-    align-items: center;
-    border-radius: 4px;
-    padding: 0.125rem 0.25rem;
-    margin: -0.125rem -0.25rem;
-  }
-
-  .task-detail__meta-control:hover {
-    background: #fff;
-  }
-
-  .task-detail__meta-value,
-  .task-detail__meta-placeholder {
-    font-size: 0.8125rem;
-    pointer-events: none;
-  }
-
   .task-detail__meta-value {
+    font-size: 0.8125rem;
     font-weight: 500;
     color: var(--detail-ink);
-  }
-
-  .task-detail__meta-placeholder {
-    color: #9aa3af;
-  }
-
-  .task-detail__date-input {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-  }
-
-  .task-detail__meta-remove {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.375rem;
-    height: 1.375rem;
-    padding: 0;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    color: #9aa3af;
-    cursor: pointer;
-  }
-
-  .task-detail__meta-remove:hover {
-    background: #eef0f3;
-    color: var(--detail-ink);
-  }
-
-  .task-detail__meta-error {
-    grid-column: 2 / -1;
-    font-size: 0.6875rem;
-    color: var(--detail-danger);
   }
 
   .task-detail__status {

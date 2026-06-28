@@ -122,85 +122,29 @@
             </span>
           </li>
 
-          <li class="task-detail__meta-row">
-            <span class="task-detail__meta-icon" aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
-                <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              </svg>
-            </span>
-            <span class="task-detail__meta-label">Start</span>
-            <div class="task-detail__meta-control">
-              @if (taskForm.controls.startDate.value; as startValue) {
-                <span class="task-detail__meta-value">{{ formatDisplayDate(startValue) }}</span>
-              } @else {
-                <span class="task-detail__meta-placeholder">Not set</span>
-              }
-              <input
-                id="startDate"
-                class="task-detail__date-input"
-                type="date"
-                formControlName="startDate"
-                [attr.min]="minStartDate"
-                aria-label="Start date"
-              />
-            </div>
-            @if (taskForm.controls.startDate.value) {
-              <button
-                type="button"
-                class="task-detail__meta-remove"
-                aria-label="Remove start date"
-                (click)="clearStartDate($event)"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                </svg>
-              </button>
-            }
-            @if (taskForm.controls.startDate.touched && startDateError) {
-              <span class="task-detail__meta-error">{{ startDateError }}</span>
-            }
-          </li>
+          <app-task-meta-date-field
+            formControlName="startDate"
+            label="Start"
+            icon="calendar"
+            inputId="startDate"
+            [minDate]="minTodayDate"
+            ariaLabel="Start date"
+            removeAriaLabel="Remove start date"
+            [errorMessage]="startDateError"
+            [showError]="taskForm.controls.startDate.touched"
+          />
 
-          <li class="task-detail__meta-row">
-            <span class="task-detail__meta-icon" aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 8v4l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
-              </svg>
-            </span>
-            <span class="task-detail__meta-label">Due</span>
-            <div class="task-detail__meta-control">
-              @if (taskForm.controls.endDate.value; as endValue) {
-                <span class="task-detail__meta-value">{{ formatDisplayDate(endValue) }}</span>
-              } @else {
-                <span class="task-detail__meta-placeholder">Not set</span>
-              }
-              <input
-                id="endDate"
-                class="task-detail__date-input"
-                type="date"
-                formControlName="endDate"
-                [min]="taskForm.controls.startDate.value || undefined"
-                aria-label="Due date"
-              />
-            </div>
-            @if (taskForm.controls.endDate.value) {
-              <button
-                type="button"
-                class="task-detail__meta-remove"
-                aria-label="Remove due date"
-                (click)="clearEndDate($event)"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                </svg>
-              </button>
-            }
-            @if ((taskForm.controls.endDate.touched || taskForm.controls.startDate.touched) && endDateError) {
-              <span class="task-detail__meta-error">{{ endDateError }}</span>
-            }
-          </li>
+          <app-task-meta-date-field
+            formControlName="endDate"
+            label="Due"
+            icon="clock"
+            inputId="endDate"
+            [minDate]="minEndDate()"
+            ariaLabel="Due date"
+            removeAriaLabel="Remove due date"
+            [errorMessage]="endDateError"
+            [showError]="taskForm.controls.endDate.touched || taskForm.controls.startDate.touched"
+          />
 
           @if (completedAtLabel(); as completedAt) {
             <li class="task-detail__meta-row">
