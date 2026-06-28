@@ -10,6 +10,7 @@ import {
   TaskDeleteEvent,
   TaskEditEvent,
   TaskRenameEvent,
+  TaskSubtaskCreateEvent,
   TaskToggleEvent,
 } from '@features/projects/presentation/models/project.view-model';
 import { TaskComponent } from '@shared/ui/task/task.component';
@@ -34,6 +35,7 @@ export class ProjectSectionComponent {
   public taskRename = output<TaskRenameEvent>();
   public taskDelete = output<TaskDeleteEvent>();
   public taskEdit = output<TaskEditEvent>();
+  public taskSubtaskCreate = output<TaskSubtaskCreateEvent>();
   public sectionUpdate = output<SectionUpdateEvent>();
   public sectionDelete = output<SectionDeleteEvent>();
 
@@ -205,5 +207,9 @@ export class ProjectSectionComponent {
 
   protected onTaskEdit(event: TaskEditEvent): void {
     this.taskEdit.emit(event);
+  }
+
+  protected onTaskSubtaskCreate(event: TaskSubtaskCreateEvent): void {
+    this.taskSubtaskCreate.emit(event);
   }
 }

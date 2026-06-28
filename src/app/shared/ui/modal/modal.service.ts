@@ -2,6 +2,7 @@ import { Injectable, Injector, signal, Type } from '@angular/core';
 
 export interface ModalConfig {
   title: string;
+  size?: 'default' | 'wide';
   parentInjector?: Injector;
   data?: Record<string, unknown>;
   onClose?: (result?: unknown) => void;

@@ -90,7 +90,7 @@ Angular UI (stores / use cases)
 | G1 | Load-modify-persist per repo call (no shared in-memory doc) | Concurrent writes can race; extra I/O | Epic **B4** |
 | G2 | No optimistic concurrency / CAS on blob writes | Last write wins silently | Epic **B4** |
 | G3 | Stores are optimistic projections, not live CRDT observers | UI can drift from persisted state until reload | Epic **B2** completion |
-| G4 | Subtask create was UI-only (fixed 2026-06-16) | Subtasks lost on reload | ✅ `CreateTaskUseCase` accepts `parentTaskId` |
+| G4 | Subtask create was UI-only (fixed 2026-06-16) | Subtasks lost on reload | ✅ Use case + task menu wired end-to-end |
 | G5 | No nested-subtask validation | CRDT allows subtask-of-subtask; UI assumes one level | Optional guard in use case or YDoc |
 | G6 | No sync / sharing / deep links | Single-device only | Epic **C** |
 | G7 | HTTP repos and auth stack still present | Dead code noise | Epic **D** |
@@ -136,8 +136,8 @@ the parent reference, so subtasks did not survive reload.
 
 ### Solution
 Extended `CreateTaskUseCase.execute(..., parentTaskId?)` and pass it from
-`TaskStore.createSubtask`. CRDT layer already handles parent linkage when
-`task.parentTaskId` is set.
+`TaskStore.createSubtask`. Subtasks are created from the **task details modal**
+(checklist + inline add field); the list row menu no longer has a separate add flow.
 
 ### Acceptance criteria
 ```gherkin

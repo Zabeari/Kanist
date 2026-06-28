@@ -45,6 +45,10 @@
     position: relative;
     z-index: 1;
 
+    &.modal-container--wide {
+      width: min(94vw, 820px);
+    }
+
     & .modal-header {
       display: flex;
       justify-content: space-between;

@@ -10,6 +10,7 @@ import {
   TaskDeleteEvent,
   TaskEditEvent,
   TaskRenameEvent,
+  TaskSubtaskCreateEvent,
   TaskToggleEvent,
 } from '@features/projects/presentation/models/project.view-model';
 import { ProjectStore } from '@features/projects/presentation/store/project.store';
@@ -79,6 +80,10 @@ export class ProjectViewComponent {
       event.endDate,
       event.completedChanged,
     );
+  }
+
+  protected onTaskSubtaskCreate(event: TaskSubtaskCreateEvent): void {
+    this.projectStore.createSubtask(event.parentTaskId, event.sectionId, event.name);
   }
 
   protected onSectionUpdate(event: SectionUpdateEvent): void {

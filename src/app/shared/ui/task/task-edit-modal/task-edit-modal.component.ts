@@ -1,8 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { AutoFocusDirective } from '@shared/directives/auto-focus.directive';
 import { MODAL_DATA, ModalRef } from '@shared/ui/modal/modal-ref';
-import { TaskEditModalState, TaskEditModalResult } from '@features/projects/presentation/models/task-edit-modal.state';
+import {
+  TaskDetailsModalResult,
+  TaskDetailsModalState,
+  TaskDetailsModalSubtask,
+} from '@features/projects/presentation/models/task-edit-modal.state';
+import { TaskStore } from '@features/projects/presentation/store/task.store';
 
 @Component({
   selector: 'app-task-edit-modal',
@@ -14,19 +19,65 @@ import { TaskEditModalState, TaskEditModalResult } from '@features/projects/pres
 })
 export class TaskEditModalComponent {
   private readonly modalRef = inject(ModalRef);
-  private readonly modalData = inject<TaskEditModalState | null>(MODAL_DATA, { optional: true });
+  private readonly taskStore = inject(TaskStore, { optional: true });
+  private readonly modalData = inject<TaskDetailsModalState | null>(MODAL_DATA, { optional: true });
 
   protected readonly completed = signal(this.modalData?.completed ?? false);
-  protected readonly todayDateInput = this.toDateInputValue(new Date());
+  protected readonly showSubtaskNameErrors = signal(false);
+  protected readonly showSubtaskComposer = signal(false);
 
-  /**
-   * The earliest date the user may select for the start date:
-   * - No original start date     → today (cannot pick a date in the past)
-   * - Original date today/future → today (same constraint)
-   * - Original date in the past  → the original date itself (cannot push the
-   *   start date further back than it was already assigned, but today-or-later
-   *   restriction is lifted because the date is already past)
-   */
+  protected readonly liveTask = computed(() => {
+    const taskId = this.modalData?.id;
+    if (!taskId || !this.taskStore) {
+      return null;
+    }
+
+    return this.taskStore.tasks()[taskId] ?? null;
+  });
+
+  protected readonly subtasks = computed((): readonly TaskDetailsModalSubtask[] => {
+    const taskId = this.modalData?.id;
+    if (!taskId || !this.modalData?.allowSubtasks || !this.taskStore) {
+      return [];
+    }
+
+    const tasks = this.taskStore.tasks();
+    const parent = tasks[taskId];
+    if (!parent) {
+      return [];
+    }
+
+    return parent.subtaskIds
+      .map((subtaskId) => tasks[subtaskId])
+      .filter((task): task is NonNullable<typeof task> => !!task)
+      .map((task) => ({
+        id: task.id,
+        name: task.name,
+        completed: task.completed,
+      }));
+  });
+
+  protected readonly subtaskProgress = computed(() => {
+    const items = this.subtasks();
+    if (items.length === 0) {
+      return null;
+    }
+
+    const done = items.filter((item) => item.completed).length;
+    return `${done} of ${items.length} done`;
+  });
+
+  protected readonly completedAtLabel = computed(() => {
+    const completedDate = this.liveTask()?.completedDate;
+    if (!completedDate) {
+      return null;
+    }
+
+    return completedDate.toLocaleDateString(undefined, { dateStyle: 'medium' });
+  });
+
+  protected readonly allowSubtasks = this.modalData?.allowSubtasks ?? false;
+
   private readonly minAllowedStartDate: Date = (() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -64,15 +115,22 @@ export class TaskEditModalComponent {
     }),
     startDate: new FormControl(this.toDateInputValue(this.modalData?.startDate), {
       nonNullable: true,
-      validators: [this.minDateValidator(
-        this.minAllowedStartDate,
-        this.existingStartDateIsInPast ? 'minOriginalDate' : 'minToday',
-      )],
+      validators: [
+        this.minDateValidator(
+          this.minAllowedStartDate,
+          this.existingStartDateIsInPast ? 'minOriginalDate' : 'minToday',
+        ),
+      ],
     }),
     endDate: new FormControl(this.toDateInputValue(this.modalData?.endDate), {
       nonNullable: true,
     }),
   }, { validators: [this.endDateAfterStartDateValidator()] });
+
+  protected readonly subtaskNameCtrl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.minLength(2), Validators.maxLength(50)],
+  });
 
   protected get nameError(): string | null {
     const errors = this.taskForm.controls.name.errors;
@@ -83,8 +141,17 @@ export class TaskEditModalComponent {
     return null;
   }
 
+  protected get subtaskNameError(): string | null {
+    const errors = this.subtaskNameCtrl.errors;
+    if (!errors) return null;
+    if (errors['required']) return 'Subtask name is required';
+    if (errors['minlength']) return 'Must be at least 2 characters';
+    if (errors['maxlength']) return 'Must be at most 50 characters';
+    return null;
+  }
+
   protected toggleCompletion(): void {
-    this.completed.update((v) => !v);
+    this.completed.update((value) => !value);
   }
 
   protected get startDateError(): string | null {
@@ -102,16 +169,64 @@ export class TaskEditModalComponent {
     return null;
   }
 
-  protected clearStartDate(): void {
+  protected clearStartDate(event?: Event): void {
+    event?.stopPropagation();
+    event?.preventDefault();
     this.taskForm.controls.startDate.setValue('');
     this.taskForm.controls.startDate.markAsTouched();
     this.taskForm.controls.startDate.updateValueAndValidity();
   }
 
-  protected clearEndDate(): void {
+  protected clearEndDate(event?: Event): void {
+    event?.stopPropagation();
+    event?.preventDefault();
     this.taskForm.controls.endDate.setValue('');
     this.taskForm.controls.endDate.markAsTouched();
     this.taskForm.controls.endDate.updateValueAndValidity();
+  }
+
+  protected formatDisplayDate(value: string): string {
+    const parsed = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+
+    return parsed.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }
+
+  protected openSubtaskComposer(): void {
+    this.showSubtaskNameErrors.set(false);
+    this.subtaskNameCtrl.reset();
+    this.showSubtaskComposer.set(true);
+  }
+
+  protected closeSubtaskComposer(): void {
+    this.showSubtaskNameErrors.set(false);
+    this.subtaskNameCtrl.reset();
+    this.showSubtaskComposer.set(false);
+  }
+
+  protected toggleSubtask(subtaskId: string): void {
+    this.modalData?.onToggleSubtask?.(subtaskId);
+  }
+
+  protected addSubtask(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.subtaskNameCtrl.invalid) {
+      this.showSubtaskNameErrors.set(true);
+      this.subtaskNameCtrl.markAsTouched();
+      return;
+    }
+
+    const name = this.subtaskNameCtrl.value.trim();
+    this.modalData?.onCreateSubtask?.(name);
+    this.closeSubtaskComposer();
   }
 
   protected save(): void {
@@ -127,7 +242,7 @@ export class TaskEditModalComponent {
       startDate,
       endDate,
       completed: this.completed(),
-    } satisfies TaskEditModalResult);
+    } satisfies TaskDetailsModalResult);
   }
 
   protected cancel(): void {

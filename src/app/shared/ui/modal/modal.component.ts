@@ -22,6 +22,7 @@ export class ModalComponent {
 
   readonly activeModal = computed(() => this.modalService.activeModal());
   readonly title = computed(() => this.modalService.activeModal()?.config.title ?? '');
+  readonly size = computed(() => this.modalService.activeModal()?.config.size ?? 'default');
 
   close(): void {
     this.modalService.close();

@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskEditModalComponent } from './task-edit-modal.component';
 import { MODAL_DATA, ModalRef } from '@shared/ui/modal/modal-ref';
+import { TaskStore } from '@features/projects/presentation/store/task.store';
+import { Task } from '@features/projects/domain/entities/task.entity';
+import { signal } from '@angular/core';
 
 describe('TaskEditModalComponent', () => {
   let fixture: ComponentFixture<TaskEditModalComponent>;
@@ -21,6 +24,8 @@ describe('TaskEditModalComponent', () => {
           provide: MODAL_DATA,
           useValue: {
             id: 't1',
+            sectionId: 'sec-1',
+            allowSubtasks: false,
             name: 'Write release notes',
             completed: false,
             description: 'Details',
@@ -77,8 +82,12 @@ describe('TaskEditModalComponent', () => {
 
   it('allows saving after clearing start date', () => {
     const startDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#startDate');
-    const clearStartDateButton: HTMLButtonElement = fixture.nativeElement.querySelector('#clearStartDate');
+    startDateInput.value = '2099-01-01';
+    startDateInput.dispatchEvent(new Event('input'));
+    startDateInput.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
 
+    const clearStartDateButton: HTMLButtonElement = fixture.nativeElement.querySelector('[aria-label="Remove start date"]');
     clearStartDateButton.click();
     fixture.detectChanges();
 
@@ -92,13 +101,13 @@ describe('TaskEditModalComponent', () => {
 
   it('clears end date when clear end date is clicked', () => {
     const endDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#endDate');
-    const clearEndDateButton: HTMLButtonElement = fixture.nativeElement.querySelector('#clearEndDate');
 
     endDateInput.value = '2099-01-01';
     endDateInput.dispatchEvent(new Event('input'));
     endDateInput.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
+    const clearEndDateButton: HTMLButtonElement = fixture.nativeElement.querySelector('[aria-label="Remove due date"]');
     clearEndDateButton.click();
     fixture.detectChanges();
 
@@ -266,5 +275,60 @@ describe('TaskEditModalComponent', () => {
       const startDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#startDate');
       expect(startDateInput.getAttribute('min')).not.toBeNull();
     });
+  });
+
+  it('renders subtasks from TaskStore when allowSubtasks is true', async () => {
+    TestBed.resetTestingModule();
+    modalRef = { close: vi.fn() } as unknown as ModalRef<void>;
+
+    const sectionId = 'sec-1';
+    const parent = Task.create('Parent task', sectionId, undefined, 't1').addSubtask('s1');
+    const subtask = Task.create('First subtask', sectionId, undefined, 's1', 't1');
+    const onCreateSubtask = vi.fn();
+
+    await TestBed.configureTestingModule({
+      imports: [TaskEditModalComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        {
+          provide: MODAL_DATA,
+          useValue: {
+            id: 't1',
+            sectionId,
+            allowSubtasks: true,
+            name: 'Parent task',
+            completed: false,
+            description: '',
+            onCreateSubtask,
+          },
+        },
+        {
+          provide: TaskStore,
+          useValue: {
+            tasks: signal({ t1: parent, s1: subtask }),
+          },
+        },
+        { provide: ModalRef, useValue: modalRef },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(TaskEditModalComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('First subtask');
+    expect(fixture.nativeElement.textContent).toContain('0 of 1 done');
+
+    fixture.nativeElement.querySelector('.task-detail__add-subtask')?.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('.task-detail__subtask-input');
+    input.value = 'Another subtask';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    fixture.detectChanges();
+
+    expect(onCreateSubtask).toHaveBeenCalledWith('Another subtask');
   });
 });
