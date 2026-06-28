@@ -49,6 +49,12 @@ export interface TaskEditEvent {
   completedChanged: boolean;
 }
 
+export interface TaskSubtaskCreateEvent {
+  parentTaskId: string;
+  sectionId: string;
+  name: string;
+}
+
 export interface TaskViewModel {
   id: string;
   name: string;

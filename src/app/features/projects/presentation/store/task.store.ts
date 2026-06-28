@@ -215,7 +215,7 @@ export class TaskStore {
       return;
     }
 
-    this.createTaskUseCase.execute(projectId, sectionId, taskName).subscribe({
+    this.createTaskUseCase.execute(projectId, sectionId, taskName, undefined, parentTaskId).subscribe({
       next: (result) => {
         if (!result.success) {
           this.setResultError(result.error, 'create subtask');
@@ -223,26 +223,13 @@ export class TaskStore {
         }
 
         const subtask = result.value;
-        // Override the subtask with the correct parentTaskId
-        const subtaskWithParent = new Task(
-          subtask.id,
-          subtask.sectionId,
-          subtask.name,
-          subtask.completed,
-          subtask.startDate,
-          subtask.description,
-          subtask.label,
-          subtask.endDate,
-          subtask.completedDate,
-          parentTaskId,
-        );
 
         this.state.update(s => ({
           ...s,
           tasks: {
             ...s.tasks,
-            [subtaskWithParent.id]: subtaskWithParent,
-            [parentTaskId]: (s.tasks[parentTaskId]).addSubtask(subtaskWithParent.id),
+            [subtask.id]: subtask,
+            [parentTaskId]: (s.tasks[parentTaskId]).addSubtask(subtask.id),
           },
         }));
       },

@@ -1,69 +1,170 @@
-<div class="task-edit-modal">
-  <form class="task-edit-form" [formGroup]="taskForm" (submit)="save()">
-    <div class="task-edit-title-row">
-      <div class="completed-button-container">
-        <label class="completed-button-label">
-          <input
-            class="completed-button"
-            [checked]="completed()"
-            (change)="toggleCompletion()"
-            type="checkbox"
-            name="completed-task"
-          />
-          <span class="radio-mark" aria-hidden="true"></span>
-          <span class="sr-only">{{ (completed() ? 'Mark task as not completed' : 'Mark task as completed') + ': ' + taskForm.controls.name.value }}</span>
-        </label>
-      </div>
+<div class="task-detail">
+  <form class="task-detail__form" [formGroup]="taskForm" (submit)="save()">
+    <header class="task-detail__header">
+      <label class="task-detail__complete">
+        <input
+          class="task-detail__complete-input"
+          type="checkbox"
+          [checked]="completed()"
+          (change)="toggleCompletion()"
+        />
+        <span class="task-detail__complete-mark" aria-hidden="true"></span>
+        <span class="sr-only">{{ completed() ? 'Mark incomplete' : 'Mark complete' }}</span>
+      </label>
 
-      <div class="form-group form-group--title">
+      <div class="task-detail__title-wrap">
+        <label class="sr-only" for="taskName">Task name</label>
         <input
           appAutoFocus
           id="taskName"
+          class="task-detail__title"
           type="text"
           formControlName="name"
           maxlength="50"
-          placeholder="Write release notes"
-          [class.completed]="completed()"
+          placeholder="Task name"
+          [class.task-detail__title--done]="completed()"
         />
         @if (taskForm.controls.name.touched && nameError) {
-          <span class="field-error">{{ nameError }}</span>
+          <span class="task-detail__error">{{ nameError }}</span>
         }
       </div>
-    </div>
+    </header>
 
-    <div class="form-group">
-      <label for="description">Description</label>
-      <textarea
-        id="description"
-        rows="4"
-        formControlName="description"
-        placeholder="Add context, scope, or acceptance criteria"
-      ></textarea>
-    </div>
+    <div class="task-detail__body">
+      <main class="task-detail__main">
+        <section class="task-detail__section" aria-labelledby="description-heading">
+          <h2 id="description-heading" class="task-detail__section-title">Description</h2>
+          <textarea
+            id="description"
+            class="task-detail__description"
+            rows="6"
+            formControlName="description"
+            placeholder="Add a description"
+          ></textarea>
+        </section>
 
-    <div class="date-grid">
-      <div class="form-group">
-        <label for="startDate">Start date</label>
-        <input id="startDate" type="date" formControlName="startDate" [attr.min]="minStartDate" />
-        <button id="clearStartDate" type="button" class="clear-date-button" (click)="clearStartDate()">Clear start date</button>
-        @if (taskForm.controls.startDate.touched && startDateError) {
-          <span class="field-error">{{ startDateError }}</span>
+        @if (allowSubtasks) {
+          <section class="task-detail__section" aria-labelledby="subtasks-heading">
+            <div class="task-detail__section-head">
+              <h2 id="subtasks-heading" class="task-detail__section-title">Subtasks</h2>
+              @if (subtaskProgress(); as progress) {
+                <span class="task-detail__section-meta">{{ progress }}</span>
+              }
+            </div>
+
+            @if (subtasks().length > 0) {
+              <ul class="task-detail__subtask-list">
+                @for (subtask of subtasks(); track subtask.id) {
+                  <li class="task-detail__subtask" [class.task-detail__subtask--done]="subtask.completed">
+                    <label class="task-detail__subtask-check">
+                      <input
+                        type="checkbox"
+                        [checked]="subtask.completed"
+                        (change)="toggleSubtask(subtask.id)"
+                      />
+                      <span class="task-detail__subtask-mark" aria-hidden="true"></span>
+                      <span class="sr-only">Toggle {{ subtask.name }}</span>
+                    </label>
+                    <span class="task-detail__subtask-name">{{ subtask.name }}</span>
+                  </li>
+                }
+              </ul>
+            }
+
+            @if (showSubtaskComposer()) {
+              <div class="task-detail__subtask-composer">
+                <input
+                  appAutoFocus
+                  class="task-detail__subtask-input"
+                  [class.task-detail__subtask-input--invalid]="showSubtaskNameErrors() && subtaskNameCtrl.invalid"
+                  [formControl]="subtaskNameCtrl"
+                  type="text"
+                  placeholder="Subtask name"
+                  aria-label="Subtask name"
+                  (keydown.enter)="addSubtask($event)"
+                />
+                <div class="task-detail__subtask-composer-actions">
+                  <button type="button" class="task-detail__btn task-detail__btn--primary task-detail__btn--compact" (click)="addSubtask($event)">Add</button>
+                  <button type="button" class="task-detail__btn task-detail__btn--ghost task-detail__btn--compact" (click)="closeSubtaskComposer()">Cancel</button>
+                </div>
+                @if (showSubtaskNameErrors() && subtaskNameError) {
+                  <span class="task-detail__error">{{ subtaskNameError }}</span>
+                }
+              </div>
+            } @else {
+              <button type="button" class="task-detail__add-subtask" (click)="openSubtaskComposer()">
+                <span class="task-detail__add-subtask-icon" aria-hidden="true">+</span>
+                Add subtask
+              </button>
+            }
+          </section>
         }
-      </div>
+      </main>
 
-      <div class="form-group">
-        <label for="endDate">End date</label>
-        <input id="endDate" type="date" formControlName="endDate" [min]="taskForm.controls.startDate.value || undefined" />
-        <button id="clearEndDate" type="button" class="clear-date-button" (click)="clearEndDate()">Clear end date</button>
-        @if ((taskForm.controls.endDate.touched || taskForm.controls.startDate.touched) && endDateError) {
-          <span class="field-error">{{ endDateError }}</span>
-        }
-      </div>
+      <aside class="task-detail__sidebar" aria-label="Task properties">
+        <ul class="task-detail__meta-list">
+          <li class="task-detail__meta-row">
+            <span class="task-detail__meta-icon" aria-hidden="true">
+              @if (completed()) {
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
+                </svg>
+              } @else {
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
+                </svg>
+              }
+            </span>
+            <span class="task-detail__meta-label">Status</span>
+            <span class="task-detail__status" [class.task-detail__status--done]="completed()">
+              {{ completed() ? 'Done' : 'To do' }}
+            </span>
+          </li>
+
+          <app-task-meta-date-field
+            formControlName="startDate"
+            label="Start"
+            icon="calendar"
+            inputId="startDate"
+            [minDate]="minTodayDate"
+            ariaLabel="Start date"
+            removeAriaLabel="Remove start date"
+            [errorMessage]="startDateError"
+            [showError]="taskForm.controls.startDate.touched"
+          />
+
+          <app-task-meta-date-field
+            formControlName="endDate"
+            label="Due"
+            icon="clock"
+            inputId="endDate"
+            [minDate]="minEndDate()"
+            ariaLabel="Due date"
+            removeAriaLabel="Remove due date"
+            [errorMessage]="endDateError"
+            [showError]="taskForm.controls.endDate.touched || taskForm.controls.startDate.touched"
+          />
+
+          @if (completedAtLabel(); as completedAt) {
+            <li class="task-detail__meta-row">
+              <span class="task-detail__meta-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" stroke-width="2" />
+                </svg>
+              </span>
+              <span class="task-detail__meta-label">Completed</span>
+              <span class="task-detail__meta-value">{{ completedAt }}</span>
+            </li>
+          }
+        </ul>
+      </aside>
     </div>
 
-    <div class="task-edit-actions">
-      <button type="button" class="cancel" (click)="cancel()">Cancel</button>
-      <button type="submit" class="save">Save task</button>
-    </div>
+    <footer class="task-detail__footer">
+      <button type="button" class="task-detail__btn task-detail__btn--ghost" (click)="cancel()">Close</button>
+      <button type="submit" class="task-detail__btn task-detail__btn--primary">Save changes</button>
+    </footer>
   </form>
 </div>

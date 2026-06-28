@@ -17,13 +17,14 @@ export class CreateTaskUseCase {
     sectionId: string,
     taskName: string,
     startDate?: Date,
+    parentTaskId?: string,
   ): Observable<Result<Task, ProjectsError>> {
     const taskNameResult = TaskName.tryCreate(taskName);
     if (!taskNameResult.success) {
       return of(fail(taskNameResult.error));
     }
 
-    const task = Task.create(taskNameResult.value.value, sectionId, startDate);
+    const task = Task.create(taskNameResult.value.value, sectionId, startDate, undefined, parentTaskId);
     return this.taskRepository.create(projectId, task).pipe(
       map((created): Result<Task, ProjectsError> => ok(created)),
       catchError(() => of(fail<ProjectsError>({ code: 'NETWORK_ERROR' }))),

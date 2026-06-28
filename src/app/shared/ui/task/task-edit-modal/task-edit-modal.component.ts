@@ -1,57 +1,101 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { AutoFocusDirective } from '@shared/directives/auto-focus.directive';
+import { TaskMetaDateFieldComponent } from '@shared/ui/date-input/task-meta-date-field.component';
 import { MODAL_DATA, ModalRef } from '@shared/ui/modal/modal-ref';
-import { TaskEditModalState, TaskEditModalResult } from '@features/projects/presentation/models/task-edit-modal.state';
+import {
+  isDateInputBefore,
+  laterDateInputValue,
+  minDateUnlessOriginalValidator,
+  startOfToday,
+  toDateInputValue,
+} from '@shared/utils/date-input.util';
+import {
+  TaskDetailsModalResult,
+  TaskDetailsModalState,
+  TaskDetailsModalSubtask,
+} from '@features/projects/presentation/models/task-edit-modal.state';
+import { TaskStore } from '@features/projects/presentation/store/task.store';
 
 @Component({
   selector: 'app-task-edit-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, AutoFocusDirective],
+  imports: [ReactiveFormsModule, AutoFocusDirective, TaskMetaDateFieldComponent],
   templateUrl: './task-edit-modal.component.html',
   styleUrl: './task-edit-modal.component.css',
 })
 export class TaskEditModalComponent {
   private readonly modalRef = inject(ModalRef);
-  private readonly modalData = inject<TaskEditModalState | null>(MODAL_DATA, { optional: true });
+  private readonly taskStore = inject(TaskStore, { optional: true });
+  private readonly modalData = inject<TaskDetailsModalState | null>(MODAL_DATA, { optional: true });
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly completed = signal(this.modalData?.completed ?? false);
-  protected readonly todayDateInput = this.toDateInputValue(new Date());
+  protected readonly showSubtaskNameErrors = signal(false);
+  protected readonly showSubtaskComposer = signal(false);
 
-  /**
-   * The earliest date the user may select for the start date:
-   * - No original start date     → today (cannot pick a date in the past)
-   * - Original date today/future → today (same constraint)
-   * - Original date in the past  → the original date itself (cannot push the
-   *   start date further back than it was already assigned, but today-or-later
-   *   restriction is lifted because the date is already past)
-   */
-  private readonly minAllowedStartDate: Date = (() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  private readonly originalStartDate = toDateInputValue(this.modalData?.startDate);
+  private readonly originalEndDate = toDateInputValue(this.modalData?.endDate);
 
-    const existing = this.modalData?.startDate;
-    if (existing) {
-      const existingNormalized = new Date(existing);
-      existingNormalized.setHours(0, 0, 0, 0);
-      if (existingNormalized < today) return existingNormalized;
+  protected readonly minTodayDate = toDateInputValue(startOfToday());
+  protected readonly startDateValue = signal(this.originalStartDate);
+  protected readonly minEndDate = computed(() =>
+    laterDateInputValue(this.startDateValue(), this.minTodayDate),
+  );
+
+  protected readonly liveTask = computed(() => {
+    const taskId = this.modalData?.id;
+    if (!taskId || !this.taskStore) {
+      return null;
     }
 
-    return today;
-  })();
+    return this.taskStore.tasks()[taskId] ?? null;
+  });
 
-  protected readonly minStartDate: string = this.toDateInputValue(this.minAllowedStartDate);
+  protected readonly subtasks = computed((): readonly TaskDetailsModalSubtask[] => {
+    const taskId = this.modalData?.id;
+    if (!taskId || !this.modalData?.allowSubtasks || !this.taskStore) {
+      return [];
+    }
 
-  private readonly existingStartDateIsInPast: boolean = (() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const existing = this.modalData?.startDate;
-    if (!existing) return false;
-    const existingNormalized = new Date(existing);
-    existingNormalized.setHours(0, 0, 0, 0);
-    return existingNormalized < today;
-  })();
+    const tasks = this.taskStore.tasks();
+    const parent = tasks[taskId];
+    if (!parent) {
+      return [];
+    }
+
+    return parent.subtaskIds
+      .map((subtaskId) => tasks[subtaskId])
+      .filter((task): task is NonNullable<typeof task> => !!task)
+      .map((task) => ({
+        id: task.id,
+        name: task.name,
+        completed: task.completed,
+      }));
+  });
+
+  protected readonly subtaskProgress = computed(() => {
+    const items = this.subtasks();
+    if (items.length === 0) {
+      return null;
+    }
+
+    const done = items.filter((item) => item.completed).length;
+    return `${done} of ${items.length} done`;
+  });
+
+  protected readonly completedAtLabel = computed(() => {
+    const completedDate = this.liveTask()?.completedDate;
+    if (!completedDate) {
+      return null;
+    }
+
+    return completedDate.toLocaleDateString(undefined, { dateStyle: 'medium' });
+  });
+
+  protected readonly allowSubtasks = this.modalData?.allowSubtasks ?? false;
 
   protected readonly taskForm = new FormGroup({
     name: new FormControl(this.modalData?.name ?? '', {
@@ -62,17 +106,31 @@ export class TaskEditModalComponent {
       nonNullable: true,
       validators: [Validators.maxLength(500)],
     }),
-    startDate: new FormControl(this.toDateInputValue(this.modalData?.startDate), {
+    startDate: new FormControl(this.originalStartDate, {
       nonNullable: true,
-      validators: [this.minDateValidator(
-        this.minAllowedStartDate,
-        this.existingStartDateIsInPast ? 'minOriginalDate' : 'minToday',
-      )],
+      validators: [
+        minDateUnlessOriginalValidator(startOfToday(), this.originalStartDate, 'minToday'),
+      ],
     }),
-    endDate: new FormControl(this.toDateInputValue(this.modalData?.endDate), {
+    endDate: new FormControl(this.originalEndDate, {
       nonNullable: true,
+      validators: [(control) => this.validateEndDate(control)],
     }),
-  }, { validators: [this.endDateAfterStartDateValidator()] });
+  });
+
+  constructor() {
+    this.taskForm.controls.startDate.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => {
+        this.startDateValue.set(value);
+        this.taskForm.controls.endDate.updateValueAndValidity();
+      });
+  }
+
+  protected readonly subtaskNameCtrl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.minLength(2), Validators.maxLength(50)],
+  });
 
   protected get nameError(): string | null {
     const errors = this.taskForm.controls.name.errors;
@@ -83,35 +141,62 @@ export class TaskEditModalComponent {
     return null;
   }
 
+  protected get subtaskNameError(): string | null {
+    const errors = this.subtaskNameCtrl.errors;
+    if (!errors) return null;
+    if (errors['required']) return 'Subtask name is required';
+    if (errors['minlength']) return 'Must be at least 2 characters';
+    if (errors['maxlength']) return 'Must be at most 50 characters';
+    return null;
+  }
+
   protected toggleCompletion(): void {
-    this.completed.update((v) => !v);
+    this.completed.update((value) => !value);
   }
 
   protected get startDateError(): string | null {
     const errors = this.taskForm.controls.startDate.errors;
     if (!errors) return null;
     if (errors['minToday']) return 'Start date cannot be before today';
-    if (errors['minOriginalDate']) return 'Start date cannot be moved further into the past than the original date';
     return null;
   }
 
   protected get endDateError(): string | null {
-    if (this.taskForm.hasError('endBeforeStartDate')) {
-      return 'End date cannot be before start date';
-    }
+    const errors = this.taskForm.controls.endDate.errors;
+    if (errors?.['minStartDate']) return 'Due date cannot be before start date';
+    if (errors?.['minToday']) return 'Due date cannot be before today';
     return null;
   }
 
-  protected clearStartDate(): void {
-    this.taskForm.controls.startDate.setValue('');
-    this.taskForm.controls.startDate.markAsTouched();
-    this.taskForm.controls.startDate.updateValueAndValidity();
+  protected openSubtaskComposer(): void {
+    this.showSubtaskNameErrors.set(false);
+    this.subtaskNameCtrl.reset();
+    this.showSubtaskComposer.set(true);
   }
 
-  protected clearEndDate(): void {
-    this.taskForm.controls.endDate.setValue('');
-    this.taskForm.controls.endDate.markAsTouched();
-    this.taskForm.controls.endDate.updateValueAndValidity();
+  protected closeSubtaskComposer(): void {
+    this.showSubtaskNameErrors.set(false);
+    this.subtaskNameCtrl.reset();
+    this.showSubtaskComposer.set(false);
+  }
+
+  protected toggleSubtask(subtaskId: string): void {
+    this.modalData?.onToggleSubtask?.(subtaskId);
+  }
+
+  protected addSubtask(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.subtaskNameCtrl.invalid) {
+      this.showSubtaskNameErrors.set(true);
+      this.subtaskNameCtrl.markAsTouched();
+      return;
+    }
+
+    const name = this.subtaskNameCtrl.value.trim();
+    this.modalData?.onCreateSubtask?.(name);
+    this.closeSubtaskComposer();
   }
 
   protected save(): void {
@@ -127,51 +212,26 @@ export class TaskEditModalComponent {
       startDate,
       endDate,
       completed: this.completed(),
-    } satisfies TaskEditModalResult);
+    } satisfies TaskDetailsModalResult);
   }
 
   protected cancel(): void {
     this.modalRef.close();
   }
 
-  private toDateInputValue(date?: Date | null): string {
-    if (!date) return '';
+  private validateEndDate(control: AbstractControl<string>): ValidationErrors | null {
+    const value = control.value;
+    if (!value) return null;
 
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
+    const startDate = this.startDateValue();
+    if (startDate && isDateInputBefore(value, startDate)) {
+      return { minStartDate: true };
+    }
 
-    return `${year}-${month}-${day}`;
-  }
+    if (isDateInputBefore(value, this.minTodayDate)) {
+      return { minToday: true };
+    }
 
-  private minDateValidator(minDate: Date, errorKey: string): ValidatorFn {
-    return (control: AbstractControl<string>): ValidationErrors | null => {
-      const value = control.value;
-      if (!value) return null;
-
-      const selectedDate = new Date(`${value}T00:00:00`);
-      if (Number.isNaN(selectedDate.getTime())) return null;
-
-      return selectedDate < minDate ? { [errorKey]: true } : null;
-    };
-  }
-
-  private endDateAfterStartDateValidator(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      const group = control as FormGroup<{
-        startDate: FormControl<string>;
-        endDate: FormControl<string>;
-      }>;
-
-      const startValue = group.controls.startDate.value;
-      const endValue = group.controls.endDate.value;
-      if (!startValue || !endValue) return null;
-
-      const startDate = new Date(`${startValue}T00:00:00`);
-      const endDate = new Date(`${endValue}T00:00:00`);
-      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null;
-
-      return endDate < startDate ? { endBeforeStartDate: true } : null;
-    };
+    return null;
   }
 }

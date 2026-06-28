@@ -4,12 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskEditModalComponent } from './task-edit-modal.component';
 import { MODAL_DATA, ModalRef } from '@shared/ui/modal/modal-ref';
+import { TaskStore } from '@features/projects/presentation/store/task.store';
+import { Task } from '@features/projects/domain/entities/task.entity';
+import { signal } from '@angular/core';
+import { startOfToday, toDateInputValue } from '@shared/utils/date-input.util';
 
 describe('TaskEditModalComponent', () => {
   let fixture: ComponentFixture<TaskEditModalComponent>;
   let modalRef: ModalRef<void>;
 
-  // Base setup: task has NO pre-existing start date, so the past-date validator is active.
   beforeEach(async () => {
     modalRef = { close: vi.fn() } as unknown as ModalRef<void>;
 
@@ -21,6 +24,8 @@ describe('TaskEditModalComponent', () => {
           provide: MODAL_DATA,
           useValue: {
             id: 't1',
+            sectionId: 'sec-1',
+            allowSubtasks: false,
             name: 'Write release notes',
             completed: false,
             description: 'Details',
@@ -33,6 +38,11 @@ describe('TaskEditModalComponent', () => {
     fixture = TestBed.createComponent(TaskEditModalComponent);
     fixture.detectChanges();
   });
+
+  function openStartCalendar(): void {
+    fixture.nativeElement.querySelector('#startDate')?.click();
+    fixture.detectChanges();
+  }
 
   it('creates the component', () => {
     expect(fixture.componentInstance).toBeTruthy();
@@ -54,17 +64,12 @@ describe('TaskEditModalComponent', () => {
   });
 
   it('does not close the modal when start date is before today', () => {
-    const yesterday = new Date();
+    const yesterday = new Date(startOfToday());
     yesterday.setDate(yesterday.getDate() - 1);
-    const year = yesterday.getFullYear();
-    const month = `${yesterday.getMonth() + 1}`.padStart(2, '0');
-    const day = `${yesterday.getDate()}`.padStart(2, '0');
-    const yesterdayInputValue = `${year}-${month}-${day}`;
+    const yesterdayInputValue = toDateInputValue(yesterday);
 
-    const startDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#startDate');
-    startDateInput.value = yesterdayInputValue;
-    startDateInput.dispatchEvent(new Event('input'));
-    startDateInput.dispatchEvent(new Event('change'));
+    fixture.componentInstance['taskForm'].controls.startDate.setValue(yesterdayInputValue);
+    fixture.componentInstance['taskForm'].controls.startDate.markAsTouched();
     fixture.detectChanges();
 
     const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
@@ -76,13 +81,14 @@ describe('TaskEditModalComponent', () => {
   });
 
   it('allows saving after clearing start date', () => {
-    const startDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#startDate');
-    const clearStartDateButton: HTMLButtonElement = fixture.nativeElement.querySelector('#clearStartDate');
+    fixture.componentInstance['taskForm'].controls.startDate.setValue('2099-01-01');
+    fixture.detectChanges();
 
+    const clearStartDateButton: HTMLButtonElement = fixture.nativeElement.querySelector('[aria-label="Remove start date"]');
     clearStartDateButton.click();
     fixture.detectChanges();
 
-    expect(startDateInput.value).toBe('');
+    expect(fixture.componentInstance['taskForm'].controls.startDate.value).toBe('');
 
     const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
     form.dispatchEvent(new Event('submit'));
@@ -91,31 +97,23 @@ describe('TaskEditModalComponent', () => {
   });
 
   it('clears end date when clear end date is clicked', () => {
-    const endDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#endDate');
-    const clearEndDateButton: HTMLButtonElement = fixture.nativeElement.querySelector('#clearEndDate');
-
-    endDateInput.value = '2099-01-01';
-    endDateInput.dispatchEvent(new Event('input'));
-    endDateInput.dispatchEvent(new Event('change'));
+    fixture.componentInstance['taskForm'].controls.endDate.setValue('2099-01-01');
     fixture.detectChanges();
 
+    const clearEndDateButton: HTMLButtonElement = fixture.nativeElement.querySelector('[aria-label="Remove due date"]');
     clearEndDateButton.click();
     fixture.detectChanges();
 
-    expect(endDateInput.value).toBe('');
+    expect(fixture.componentInstance['taskForm'].controls.endDate.value).toBe('');
   });
 
-  it('does not close when end date is before start date', () => {
-    const startDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#startDate');
-    const endDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#endDate');
+  it('does not close when end date is before today', () => {
+    const yesterday = new Date(startOfToday());
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayInputValue = toDateInputValue(yesterday);
 
-    startDateInput.value = '2099-01-10';
-    startDateInput.dispatchEvent(new Event('input'));
-    startDateInput.dispatchEvent(new Event('change'));
-
-    endDateInput.value = '2099-01-01';
-    endDateInput.dispatchEvent(new Event('input'));
-    endDateInput.dispatchEvent(new Event('change'));
+    fixture.componentInstance['taskForm'].controls.endDate.setValue(yesterdayInputValue);
+    fixture.componentInstance['taskForm'].controls.endDate.markAsTouched();
     fixture.detectChanges();
 
     const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
@@ -123,18 +121,65 @@ describe('TaskEditModalComponent', () => {
     fixture.detectChanges();
 
     expect(modalRef.close).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).toContain('End date cannot be before start date');
+    expect(fixture.nativeElement.textContent).toContain('Due date cannot be before today');
+  });
+
+  it('does not close when end date is before start date', () => {
+    fixture.componentInstance['taskForm'].controls.startDate.setValue('2099-01-10');
+    fixture.componentInstance['taskForm'].controls.endDate.setValue('2099-01-01');
+    fixture.componentInstance['taskForm'].controls.endDate.markAsTouched();
+    fixture.detectChanges();
+
+    const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
+    form.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(modalRef.close).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Due date cannot be before start date');
+  });
+
+  it('disables due dates before the start date in the calendar', () => {
+    fixture.componentInstance['taskForm'].controls.startDate.setValue('2099-01-10');
+    fixture.componentInstance['taskForm'].controls.endDate.setValue('2099-01-20');
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('#endDate')?.click();
+    fixture.detectChanges();
+
+    const dayBeforeStart: HTMLButtonElement | null = fixture.nativeElement.querySelector('[data-date="2099-01-09"]');
+    const startDay: HTMLButtonElement | null = fixture.nativeElement.querySelector('[data-date="2099-01-10"]');
+
+    expect(dayBeforeStart?.disabled).toBe(true);
+    expect(dayBeforeStart?.classList.contains('task-meta-date-field__day--disabled')).toBe(true);
+    expect(startDay?.disabled).toBe(false);
+  });
+
+  it('rejects selecting a due date before the start date in the calendar', () => {
+    fixture.componentInstance['taskForm'].controls.startDate.setValue('2099-01-10');
+    fixture.componentInstance['taskForm'].controls.endDate.setValue('2099-01-20');
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('#endDate')?.click();
+    fixture.detectChanges();
+
+    const dayBeforeStart: HTMLButtonElement | null = fixture.nativeElement.querySelector('[data-date="2099-01-09"]');
+    dayBeforeStart!.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['taskForm'].controls.endDate.value).toBe('2099-01-20');
   });
 
   describe('when the task already has a start date set in the past (loaded from backend)', () => {
     let pastDate: Date;
+    let originalValue: string;
 
     beforeEach(async () => {
       TestBed.resetTestingModule();
       modalRef = { close: vi.fn() } as unknown as ModalRef<void>;
 
-      pastDate = new Date();
+      pastDate = new Date(startOfToday());
       pastDate.setDate(pastDate.getDate() - 30);
+      originalValue = toDateInputValue(pastDate);
 
       await TestBed.configureTestingModule({
         imports: [TaskEditModalComponent],
@@ -167,42 +212,32 @@ describe('TaskEditModalComponent', () => {
       expect(fixture.nativeElement.textContent).not.toContain('Start date cannot be');
     });
 
-    it('sets the min attribute on the start date input to the original start date', () => {
-      const year = pastDate.getFullYear();
-      const month = `${pastDate.getMonth() + 1}`.padStart(2, '0');
-      const day = `${pastDate.getDate()}`.padStart(2, '0');
-      const expectedMin = `${year}-${month}-${day}`;
+    it('shows past dates as disabled in the calendar', () => {
+      openStartCalendar();
 
-      const startDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#startDate');
-      expect(startDateInput.getAttribute('min')).toBe(expectedMin);
+      const disabledDay: HTMLButtonElement | null = fixture.nativeElement.querySelector(
+        '.task-meta-date-field__day--disabled:not(.task-meta-date-field__day--outside)',
+      );
+
+      expect(disabledDay).toBeTruthy();
+      expect(disabledDay?.disabled).toBe(true);
     });
 
-    it('does not allow setting a date before the original start date', () => {
-      const beforeOriginal = new Date(pastDate);
-      beforeOriginal.setDate(beforeOriginal.getDate() - 1);
-      const value = `${beforeOriginal.getFullYear()}-${`${beforeOriginal.getMonth() + 1}`.padStart(2, '0')}-${`${beforeOriginal.getDate()}`.padStart(2, '0')}`;
+    it('rejects selecting a date before today', () => {
+      openStartCalendar();
 
-      const startDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#startDate');
-      startDateInput.value = value;
-      startDateInput.dispatchEvent(new Event('input'));
-      startDateInput.dispatchEvent(new Event('change'));
+      const disabledDay: HTMLButtonElement | null = fixture.nativeElement.querySelector(
+        '.task-meta-date-field__day--disabled:not(.task-meta-date-field__day--outside)',
+      );
+      expect(disabledDay).toBeTruthy();
+      disabledDay!.click();
       fixture.detectChanges();
 
-      const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
-      form.dispatchEvent(new Event('submit'));
-      fixture.detectChanges();
-
-      expect(modalRef.close).not.toHaveBeenCalled();
-      expect(fixture.nativeElement.textContent).toContain('Start date cannot be moved further into the past than the original date');
+      expect(fixture.componentInstance['taskForm'].controls.startDate.value).toBe(originalValue);
     });
 
     it('allows saving when the start date is changed to a future date', () => {
-      const futureValue = '2099-12-31';
-
-      const startDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#startDate');
-      startDateInput.value = futureValue;
-      startDateInput.dispatchEvent(new Event('input'));
-      startDateInput.dispatchEvent(new Event('change'));
+      fixture.componentInstance['taskForm'].controls.startDate.setValue('2099-12-31');
       fixture.detectChanges();
 
       const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
@@ -218,7 +253,7 @@ describe('TaskEditModalComponent', () => {
       TestBed.resetTestingModule();
       modalRef = { close: vi.fn() } as unknown as ModalRef<void>;
 
-      const futureDate = new Date();
+      const futureDate = new Date(startOfToday());
       futureDate.setDate(futureDate.getDate() + 30);
 
       await TestBed.configureTestingModule({
@@ -244,14 +279,11 @@ describe('TaskEditModalComponent', () => {
     });
 
     it('still enforces the today-or-later restriction when a past date is entered', () => {
-      const yesterday = new Date();
+      const yesterday = new Date(startOfToday());
       yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayValue = `${yesterday.getFullYear()}-${`${yesterday.getMonth() + 1}`.padStart(2, '0')}-${`${yesterday.getDate()}`.padStart(2, '0')}`;
 
-      const startDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#startDate');
-      startDateInput.value = yesterdayValue;
-      startDateInput.dispatchEvent(new Event('input'));
-      startDateInput.dispatchEvent(new Event('change'));
+      fixture.componentInstance['taskForm'].controls.startDate.setValue(toDateInputValue(yesterday));
+      fixture.componentInstance['taskForm'].controls.startDate.markAsTouched();
       fixture.detectChanges();
 
       const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
@@ -262,9 +294,76 @@ describe('TaskEditModalComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Start date cannot be before today');
     });
 
-    it('applies a min-date restriction on the start date input', () => {
-      const startDateInput: HTMLInputElement = fixture.nativeElement.querySelector('#startDate');
-      expect(startDateInput.getAttribute('min')).not.toBeNull();
+    it('disables past dates when viewing the current month in the calendar', () => {
+      openStartCalendar();
+
+      const previousMonthButton: HTMLButtonElement = fixture.nativeElement.querySelector('[aria-label="Previous month"]');
+      for (let index = 0; index < 3; index += 1) {
+        previousMonthButton.click();
+        fixture.detectChanges();
+      }
+
+      const disabledDay: HTMLButtonElement | null = fixture.nativeElement.querySelector(
+        '.task-meta-date-field__day--disabled:not(.task-meta-date-field__day--outside)',
+      );
+
+      expect(disabledDay).toBeTruthy();
+      expect(disabledDay?.disabled).toBe(true);
     });
+  });
+
+  it('renders subtasks from TaskStore when allowSubtasks is true', async () => {
+    TestBed.resetTestingModule();
+    modalRef = { close: vi.fn() } as unknown as ModalRef<void>;
+
+    const sectionId = 'sec-1';
+    const parent = Task.create('Parent task', sectionId, undefined, 't1').addSubtask('s1');
+    const subtask = Task.create('First subtask', sectionId, undefined, 's1', 't1');
+    const onCreateSubtask = vi.fn();
+
+    await TestBed.configureTestingModule({
+      imports: [TaskEditModalComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        {
+          provide: MODAL_DATA,
+          useValue: {
+            id: 't1',
+            sectionId,
+            allowSubtasks: true,
+            name: 'Parent task',
+            completed: false,
+            description: '',
+            onCreateSubtask,
+          },
+        },
+        {
+          provide: TaskStore,
+          useValue: {
+            tasks: signal({ t1: parent, s1: subtask }),
+          },
+        },
+        { provide: ModalRef, useValue: modalRef },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(TaskEditModalComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('First subtask');
+    expect(fixture.nativeElement.textContent).toContain('0 of 1 done');
+
+    fixture.nativeElement.querySelector('.task-detail__add-subtask')?.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('.task-detail__subtask-input');
+    input.value = 'Another subtask';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    fixture.detectChanges();
+
+    expect(onCreateSubtask).toHaveBeenCalledWith('Another subtask');
   });
 });

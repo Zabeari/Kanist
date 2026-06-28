@@ -9,7 +9,7 @@
 >
     <div class="completed-button-container">
         <label class="completed-button-label">
-            <input class="completed-button" [checked]="taskInfo().completed" (change)="sendTaskCompletedChange()" type="checkbox" name="completed-task" />
+            <input class="completed-button" [checked]="taskInfo().completed" (change)="sendTaskCompletedChange()" (click)="$event.stopPropagation()" type="checkbox" name="completed-task" />
             <span class="radio-mark" aria-hidden="true"></span>
             <span class="sr-only">{{ (taskInfo().completed ? 'Mark task as not completed' : 'Mark task as completed') + ': ' + taskInfo().name }}</span>
         </label>
@@ -22,6 +22,7 @@
                 class="task-name-input"
                 [class.invalid]="taskNameCtrl.touched && taskNameCtrl.invalid"
                 [formControl]="taskNameCtrl"
+                (click)="$event.stopPropagation()"
                 (keydown.enter)="onSave($event)"
                 (keydown.escape)="onCancel($event)"
                 (blur)="onSave($event)"
@@ -55,7 +56,7 @@
                                 <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
                             </svg>
                         </span>
-                        <span>Edit</span>
+                        <span>Rename</span>
                     </button>
                     <button type="button" class="task-menu-item task-menu-item--danger" (click)="onDelete($event)">
                         <span class="task-menu-icon">
@@ -80,6 +81,7 @@
             <app-task
                 [taskInfo]="subtask"
                 [sectionId]="sectionId()"
+                [allowSubtasks]="false"
                 (taskToggle)="forwardTaskToggle($event)"
                 (taskRename)="forwardTaskRename($event)"
                 (taskDelete)="forwardTaskDelete($event)"

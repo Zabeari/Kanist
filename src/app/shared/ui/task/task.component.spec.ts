@@ -50,24 +50,32 @@ describe('TaskComponent', () => {
     expect(nameEl?.textContent?.trim()).toBe('Write tests');
   });
 
-  it('opens the task edit modal when the card is clicked', () => {
+  it('opens the task details modal when the card is clicked', () => {
     fixture.nativeElement.querySelector('.task-container').click();
 
     expect(modalServiceMock.open).toHaveBeenCalledWith(
       TaskEditModalComponent,
       expect.objectContaining({
-        title: 'Edit Task',
+        title: 'Task details',
+        size: 'wide',
+        data: expect.objectContaining({
+          id: 't1',
+          sectionId: 's1',
+          allowSubtasks: true,
+          onCreateSubtask: expect.any(Function),
+          onToggleSubtask: expect.any(Function),
+        }),
       }),
     );
   });
 
-  it('does not open the task edit modal from the completion control', () => {
+  it('does not open the task details modal from the completion control', () => {
     fixture.nativeElement.querySelector('.completed-button-container').click();
 
     expect(modalServiceMock.open).not.toHaveBeenCalled();
   });
 
-  it('does not open the task edit modal from the menu trigger', () => {
+  it('does not open the task details modal from the menu trigger', () => {
     fixture.nativeElement.querySelector('.task-menu-trigger').click();
 
     expect(modalServiceMock.open).not.toHaveBeenCalled();
@@ -127,7 +135,7 @@ describe('TaskComponent', () => {
     expect(modalServiceMock.open).toHaveBeenCalledWith(
       ConfirmComponent,
       expect.objectContaining({
-        title: 'Delete Task',
+        title: 'Delete task',
       }),
     );
   });
@@ -151,5 +159,38 @@ describe('TaskComponent', () => {
     config.onClose?.(true);
 
     expect(emitSpy).toHaveBeenCalledWith({ id: 't1', sectionId: 's1' });
+  });
+
+  it('emits taskSubtaskCreate when modal create callback is invoked', () => {
+    const emitSpy = vi.spyOn(component.taskSubtaskCreate, 'emit');
+
+    fixture.nativeElement.querySelector('.task-container').click();
+
+    const [, config] = modalServiceMock.open.mock.calls[0] as [
+      typeof TaskEditModalComponent,
+      { data?: { onCreateSubtask?: (name: string) => void } }
+    ];
+
+    config.data?.onCreateSubtask?.('New subtask');
+
+    expect(emitSpy).toHaveBeenCalledWith({
+      parentTaskId: 't1',
+      sectionId: 's1',
+      name: 'New subtask',
+    });
+  });
+
+  it('opens task details with allowSubtasks false for nested tasks', () => {
+    fixture.componentRef.setInput('allowSubtasks', false);
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.task-container').click();
+
+    expect(modalServiceMock.open).toHaveBeenCalledWith(
+      TaskEditModalComponent,
+      expect.objectContaining({
+        data: expect.objectContaining({ allowSubtasks: false }),
+      }),
+    );
   });
 });

@@ -1,0 +1,241 @@
+:host {
+  display: grid;
+  grid-template-columns: 1rem 3rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0;
+}
+
+.task-meta-date-field__icon {
+  color: var(--detail-muted, #6b7280);
+}
+
+.task-meta-date-field__label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--detail-muted, #6b7280);
+}
+
+.task-meta-date-field__control {
+  position: relative;
+  min-height: 1.375rem;
+}
+
+.task-meta-date-field__trigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 1.375rem;
+  padding: 0.125rem 0.25rem;
+  margin: -0.125rem -0.25rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-meta-date-field__trigger:hover:not(:disabled) {
+  background: #fff;
+}
+
+.task-meta-date-field__trigger:focus-visible {
+  outline: 2px solid var(--detail-accent, #2563eb);
+  outline-offset: 1px;
+}
+
+.task-meta-date-field__trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.task-meta-date-field__value,
+.task-meta-date-field__placeholder {
+  font-size: 0.8125rem;
+}
+
+.task-meta-date-field__value {
+  font-weight: 500;
+  color: var(--detail-ink, #111827);
+}
+
+.task-meta-date-field__placeholder {
+  color: #9aa3af;
+}
+
+.task-meta-date-field__popover {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  right: 0;
+  z-index: 30;
+  width: min(17.5rem, calc(100vw - 2rem));
+  padding: 0.75rem;
+  border: 1px solid var(--detail-line, #e4e7eb);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow:
+    0 4px 6px rgb(15 23 42 / 4%),
+    0 16px 32px rgb(15 23 42 / 12%);
+  animation: task-meta-date-field-popover-in 140ms ease-out;
+}
+
+@keyframes task-meta-date-field-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-meta-date-field__popover {
+    animation: none;
+  }
+}
+
+.task-meta-date-field__calendar-header {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr 1.75rem;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.625rem;
+}
+
+.task-meta-date-field__calendar-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--detail-ink, #111827);
+  text-align: center;
+}
+
+.task-meta-date-field__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--detail-muted, #6b7280);
+  cursor: pointer;
+}
+
+.task-meta-date-field__nav:hover {
+  background: #f3f4f6;
+  color: var(--detail-ink, #111827);
+}
+
+.task-meta-date-field__nav:focus-visible {
+  outline: 2px solid var(--detail-accent, #2563eb);
+  outline-offset: 1px;
+}
+
+.task-meta-date-field__weekdays,
+.task-meta-date-field__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.125rem;
+}
+
+.task-meta-date-field__weekdays {
+  margin-bottom: 0.375rem;
+}
+
+.task-meta-date-field__weekday {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--detail-muted, #6b7280);
+}
+
+.task-meta-date-field__day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--detail-ink, #111827);
+  cursor: pointer;
+}
+
+.task-meta-date-field__day:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.task-meta-date-field__day:focus-visible {
+  outline: 2px solid var(--detail-accent, #2563eb);
+  outline-offset: 1px;
+}
+
+.task-meta-date-field__day--outside {
+  color: #b0b8c4;
+}
+
+.task-meta-date-field__day--disabled,
+.task-meta-date-field__day--disabled.task-meta-date-field__day--outside {
+  color: #c8cdd5;
+  cursor: not-allowed;
+  text-decoration: line-through;
+  text-decoration-color: rgb(200 205 213 / 70%);
+}
+
+.task-meta-date-field__day--disabled:hover {
+  background: transparent;
+}
+
+.task-meta-date-field__day--today:not(.task-meta-date-field__day--selected) {
+  box-shadow: inset 0 0 0 1px var(--detail-accent, #2563eb);
+  color: var(--detail-accent, #2563eb);
+}
+
+.task-meta-date-field__day--selected {
+  background: var(--detail-accent, #2563eb);
+  color: #fff;
+}
+
+.task-meta-date-field__day--selected.task-meta-date-field__day--disabled {
+  background: #dbeafe;
+  color: #93a8c7;
+  box-shadow: none;
+  text-decoration: line-through;
+}
+
+.task-meta-date-field__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #9aa3af;
+  cursor: pointer;
+}
+
+.task-meta-date-field__remove:hover {
+  background: #eef0f3;
+  color: var(--detail-ink, #111827);
+}
+
+.task-meta-date-field__error {
+  grid-column: 2 / -1;
+  font-size: 0.75rem;
+  color: #dc2626;
+}
