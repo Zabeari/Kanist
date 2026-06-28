@@ -68,6 +68,19 @@ describe('CrdtTaskRepository', () => {
     expect(loadStoredDoc().getSections(projectId)[0].taskIds).toEqual(['task-1']);
   });
 
+  it('create persists subtask linked to parent in yjs state', async () => {
+    const parent = Task.create('Parent', sectionId, startDate, 'task-parent');
+    await firstValueFrom(repository.create(projectId, parent));
+
+    const subtask = Task.create('Subtask', sectionId, startDate, 'task-sub', 'task-parent');
+    await firstValueFrom(repository.create(projectId, subtask));
+
+    const doc = loadStoredDoc();
+    expect(doc.findTask('task-sub')?.parentTaskId).toBe('task-parent');
+    expect(doc.findTask('task-parent')?.subtaskIds).toEqual(['task-sub']);
+    expect(doc.getSections(projectId)[0].taskIds).toEqual(['task-parent']);
+  });
+
   it('update changes task fields in yjs state', async () => {
     const task = Task.create('Task A', sectionId, startDate, 'task-1');
     await firstValueFrom(repository.create(projectId, task));

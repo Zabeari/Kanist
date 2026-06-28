@@ -39,6 +39,16 @@ describe('CreateTaskUseCase', () => {
     const taskArg = (repo.create as ReturnType<typeof vi.fn>).mock.calls[0][1] as Task;
     expect(taskArg.name).toBe('Task A');
     expect(taskArg.sectionId).toBe('sec-1');
+    expect(taskArg.parentTaskId).toBeUndefined();
+  });
+
+  it('passes parentTaskId when creating a subtask', () => {
+    useCase.execute('p1', 'sec-1', 'Subtask A', start, 'task-parent').subscribe((result) => {
+      expect(result.success).toBe(true);
+    });
+
+    const taskArg = (repo.create as ReturnType<typeof vi.fn>).mock.calls[0][1] as Task;
+    expect(taskArg.parentTaskId).toBe('task-parent');
   });
 
   it('returns validation error result when task name is invalid', () => {
